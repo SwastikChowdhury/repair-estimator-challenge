@@ -1,0 +1,54 @@
+---
+description: Acceptance criteria from the client brief — every feature here is mandatory. Always applies.
+alwaysApply: true
+---
+
+# Acceptance criteria (Stage 1 triage cuts submissions missing any core feature)
+
+## Projects
+- [ ] Create, name, rename, delete, and switch between multiple projects; no data bleed between projects.
+- [ ] Each project independently stores selections, quantities, notes, photos, rooms, per-project overrides.
+- [ ] App reopens to the last active project. Autosave on every change (debounced), plus save on visibilitychange/pagehide.
+
+## Line items
+- [ ] All 108 items from `data/repair-items.js` present, anchored by their `id`. Never retype costs — import the constant.
+- [ ] Each line shows: name, unit, qty input (`type="number"` `inputmode="decimal"`), unit cost, live line total.
+- [ ] Running project total visible at all times (sticky header).
+- [ ] Per-item price override: tap the unit cost to edit it for THIS project only (visually badge overridden prices).
+- [ ] Global price update: settings screen lists all items with editable default costs + CSV re-upload; changes roll out across all projects.
+- [ ] Add custom line item (name, cost, unit) into any group; delete/hide any individual item per project.
+- [ ] Every group contains a "No action needed" option that marks the group reviewed at $0.
+
+## Rooms (most important feature per the brief)
+Room types and their groups (item ids reference repair-items.js):
+- **Interior / General** (single instance): Flooring [ig-01..06], Paint & Wall Repair [ig-07..09], Doors [ig-10..18], Pest Control [ig-23, ig-24], General & Site Work [ig-19..22, ig-25..28] (catch-all so every item lives in a group).
+- **Kitchen** (single, but allow adding more): Cabinets [kt-01..05], Countertops & Tile [kt-06..10], Appliances [kt-11..17].
+- **Bathroom** (multi — "Bathroom 1", "Bathroom 2"...): Vanity & Countertop [ba-01, ba-02, ba-03, ba-14, ba-04, ba-15, ba-16], Tub & Shower [ba-07..13], Tile [ba-05, ba-06].
+- **Bedroom** (multi): Flooring [ig-01..06], Paint [ig-07..09], Doors [ig-10, ig-11, ig-13], Closet [ig-12, ig-11].
+- **Living / Common Area** (multi): Flooring [ig-01..06], Paint [ig-07..09], Doors [ig-10..13], Lighting [ig-22].
+- **Systems & Structure** (single): HVAC [as-01..09], Electrical [as-10, as-11, as-18, as-19, as-20, as-24], Structural [as-12..17], Insulation & Drywall [as-21, as-22, as-23].
+- **Exterior** (single): Fence [ex-01..03], Siding [ex-05..09], Windows [ex-13..17], Garage [ex-21..23], Trees & Yard [ex-04, ex-10..12, ex-20], Exterior General [ex-18, ex-19].
+Notes: the same catalog item may appear in multiple room types — selections are keyed `roomId:itemId`, so instances never collide. The 19 named groups from the brief must all exist; the catch-all groups are additions, which is allowed.
+- [ ] Add/remove room instances freely; auto-labels "Bathroom 2", "Bedroom 3" etc.; labels renameable.
+- [ ] Group headers show instance-qualified names, e.g. "Bathroom 1: Tub & Shower".
+
+## Progress
+- [ ] Progress = reviewed groups ÷ total groups across ALL sections and ALL room instances. A group is reviewed when any item in it is checked (including "No action needed"). Adding a room grows the denominator (correct behavior).
+
+## Photos
+- [ ] Attach photos at project level AND on equipment items; Android-safe pattern: `<input type="file" accept="image/*" capture="environment">` appended to the DOM before `.click()`.
+- [ ] Compress on capture: max 1200px long edge, JPEG quality 0.7, before storing as dataURL in localStorage.
+- [ ] Thumbnails with individual delete. Handle localStorage QuotaExceededError with a visible message (never silent loss). Show storage usage in settings.
+
+## Export
+- [ ] ZIP download containing a styled .xlsx (via vendored ExcelJS) + all photos in a /photos folder (via vendored JSZip). ZIP even when there are no photos (consistency).
+- [ ] Excel: title block with project name + date, per-room sections with headers, columns Item/Unit/Unit Cost/Qty/Total, section subtotals, grand total, currency number formats, sensible column widths.
+- [ ] Export must work fully offline.
+
+## Creative addition: "Walkthrough Intelligence" (three connected features)
+1. **Quantity pre-fill**: on project creation, ask sqft / beds / baths. Suggest starting quantities: flooring ≈ sqft, interior paint ≈ 2.75 × sqft, trim LF ≈ 1.5 × perimeter of a square footprint, roof ≈ sqft/225 (its unit is per 225 sqft), attic insulation qty ≈ sqft/1600. Suggestions appear as pre-filled but clearly badged "suggested" and fully editable; never auto-check items.
+2. **Equipment age flags**: year fields on Furnace (as-01), Condensing Unit (as-02), Water Heater (as-08), Roof (as-16). Expected lifespans: furnace 18y, condenser 15y, water heater 11y, roof 22y. If age ≥ lifespan − 2: inline warning "≈N yrs old — near end of life" with one-tap "Add to estimate (qty 1)".
+3. **Deal Guard**: ARV input in project meta. Live panel: repair total, max offer = ARV × 0.70 − repairs (70% rule), projected margin. Show total as a range: ±(5% + 15% × unreviewed-group-fraction). Pre-export check: if any of HVAC/Electrical/Structural/Roof groups are unreviewed, show a warning dialog listing them, with "Export anyway" / "Go back".
+
+## Demo data
+- [ ] First launch seeds a demo project ("742 Maple St — Demo") with meta filled, ~10 realistic selections across several rooms, one equipment year triggering an age flag, and ARV set — so a reviewer's first screen is never empty. Plus an empty "New Estimate" behavior when they create their own.

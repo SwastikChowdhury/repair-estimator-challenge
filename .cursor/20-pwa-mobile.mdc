@@ -1,0 +1,30 @@
+---
+description: PWA, offline, and mobile-quality rules. Always applies.
+alwaysApply: true
+---
+
+# PWA & offline (15% of score — reviewer WILL airplane-mode the app)
+
+## Service worker
+- Register with a relative path: `navigator.serviceWorker.register('./sw.js')`. Scope `./`.
+- Cache-first strategy with a versioned cache name (`spark-estimator-v1`); bump the version string on every deploy and delete old caches in `activate`.
+- Precache EVERYTHING: `./`, `./index.html`, `./manifest.json`, `./vendor/exceljs.min.js`, `./vendor/jszip.min.js`, both icons.
+- `skipWaiting()` + `clients.claim()` so updates apply without confusing stale states.
+
+## Manifest
+- Relative `start_url: "./"`, `scope: "./"`, `display: "standalone"`, theme/background colors matching the app header, 192 + 512 icons (512 marked `purpose: "any maskable"` acceptable).
+- iOS extras in index.html: `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-touch-icon` (180px can reuse 192 icon), `theme-color` meta.
+
+## Mobile quality bar (30% of score)
+- Viewport meta with `viewport-fit=cover`; respect `env(safe-area-inset-*)` on fixed header/footer.
+- All tap targets ≥ 44×44px. No hover-dependent UI.
+- Number inputs: `inputmode="decimal"`, no spinner arrows, large font (≥16px to prevent iOS zoom-on-focus).
+- No layout shift on load; system font stack; no external font requests.
+- Fixed bottom elements must not be covered by the on-screen keyboard trap: keep qty inputs scrollable into view.
+- Test checklist (human, on device): install to home screen, airplane mode → full walkthrough → export ZIP, kill and reopen app → data persists, rotate device.
+
+## Known platform gotchas — code defensively
+- iOS standalone PWA has SEPARATE localStorage from Safari (document in README, not a bug).
+- iOS localStorage cap ≈ 5MB — hence mandatory photo compression and quota error handling.
+- Android file input: the input element must be in the DOM when `.click()` fires, and removed after `change`.
+- `beforeunload` is unreliable on mobile — save on `visibilitychange` (hidden) and `pagehide` instead.

@@ -1,0 +1,26 @@
+---
+description: Visual design system. Always applies to any UI work.
+alwaysApply: true
+---
+
+# Design system — professional field-tool aesthetic, NOT the reference app's look
+
+The reference app is dark-gray header + orange accents + rounded white cards. Do something visibly different and more refined.
+
+## Tokens (define once as CSS custom properties on :root)
+- Palette: deep navy/slate primary (`#0f2a43`-ish) for header and emphasis; a single confident accent (teal/green family, e.g. `#0d9488`) for totals, progress, and primary actions; warm neutral background (`#f7f6f3`-ish); semantic red only for warnings/deletes; amber for "suggested" badges and age flags.
+- Type: system font stack. Scale: 12/14/16/20/28/40. Totals and money in `font-variant-numeric: tabular-nums`.
+- Spacing scale: 4/8/12/16/24/32. Radius: 10–14px. One subtle shadow token.
+- All money formatted `$12,345` (no cents in UI totals; cents allowed on unit costs).
+
+## Layout
+- Sticky top bar: project name, running total (the hero number), progress bar. Compact — content is king on a phone.
+- Room navigation: horizontally scrollable chips/tabs with per-room subtotal badges; "+ Add room" always reachable.
+- Groups: collapsible cards; header row = group name, reviewed check, group subtotal. Collapsed by default except the first.
+- Checked items get a clear selected state; unchecked items stay quiet (low contrast) so the estimate reads at a glance.
+- Deal Guard: a bottom sheet / expandable footer panel showing max offer + margin; never blocks content.
+- Micro-interactions: the running total animates (count-up ~250ms) on change; group expand/collapse ~200ms ease. Nothing slower than 300ms; no gratuitous animation.
+
+## Tone
+- Zero lorem ipsum, zero emoji in UI chrome. Labels in plain contractor English ("No action needed", "Suggested from 1,400 sqft — tap to edit").
+- Empty states always say what to do next ("Add your first room to start the walkthrough").

@@ -1,0 +1,45 @@
+---
+description: Core architecture — always applies. Never violate these decisions.
+alwaysApply: true
+---
+
+# Project: Spark Homes Repair Estimator (mobile-first PWA)
+
+## Hard constraints — never violate
+- Vanilla JavaScript, HTML, CSS only. NO frameworks (no React, Vue, Svelte, jQuery, Alpine).
+- NO build tools, NO npm, NO bundlers, NO Node server. The app must run by opening index.html or serving static files.
+- NO Tailwind or any CSS framework. Hand-written CSS with custom properties only.
+- Exactly these files: `index.html` (all app HTML/CSS/JS inline), `sw.js`, `manifest.json`, `icons/icon-192.png`, `icons/icon-512.png`, `vendor/exceljs.min.js`, `vendor/jszip.min.js`.
+- Libraries are VENDORED locally in `/vendor` and loaded with relative `<script src="./vendor/...">` tags. Never load from a CDN.
+- ALL persistence via `localStorage` only. Do NOT use IndexedDB, sessionStorage, cookies, or any backend/fetch for data.
+- ALL URLs/paths in HTML, sw.js, and manifest.json must be RELATIVE (`./sw.js`, `./manifest.json`, scope `./`). Never absolute (`/sw.js`) — the app deploys to a GitHub Pages project path.
+
+## Data model — the unified room-instance model (do not special-case any room type)
+```js
+project = {
+  id, name, createdAt, updatedAt,
+  meta: { sqft: null, beds: null, baths: null, arv: null },
+  rooms: [ { id: 'r1', type: 'bathroom', label: 'Bathroom 1' }, ... ],
+  selections: { 'roomId:itemId': { checked: bool, qty: number|null, unitCostOverride: number|null, year: number|null } },
+  customItems: [ { id, roomId, groupId, name, cost, unit } ],
+  removedItemIds: [ 'roomId:itemId', ... ],
+  photos: { 'roomId:itemId' | 'project': [ { dataUrl, ts } ] },
+}
+```
+- Room TYPES are static config (which groups + which item ids each type contains). Room INSTANCES are rows in `project.rooms`. Kitchen, Exterior, Systems, Interior/General are single-instance room types; Bathroom, Bedroom, Living/Common are multi-instance. All flow through the same code path.
+- Adding a room = push one object to `rooms`. Removing a room = remove it and purge its `roomId:` keys. No other bookkeeping.
+- Line total = `qty × effectiveCost`. No minimum-price logic (the CSV is the single source of truth for pricing).
+- Price precedence, one function only: `selection.unitCostOverride ?? globalPriceOverrides[itemId] ?? REPAIR_ITEMS default`.
+- Global price overrides live in their own localStorage key and apply live across all projects. The Excel export snapshots effective prices at export time.
+
+## Rendering rules
+- Template-literal render functions + ONE delegated event listener on the app root (`data-action` attributes). No inline `onclick`.
+- HOT PATH: typing in a qty/price input must NOT trigger a full re-render (it would blur the input on mobile). Update the line total, group total, section total, and header running total via targeted DOM writes. Full re-render only on structural changes (check/uncheck, room add/remove, navigation).
+- Preserve scroll position across re-renders of the list area.
+- Escape all user-supplied strings (project names, room labels, custom item names) before injecting into HTML.
+
+## Code quality bar (scored at 20% by human reviewers)
+- Clear section banners in index.html: DATA / STATE / STORAGE / RENDER / EVENTS / EXPORT / PWA.
+- Small pure functions for all math (line total, group total, room total, project total, progress, max offer). No calculation inline inside templates.
+- Meaningful names, brief comments explaining WHY on non-obvious decisions, no dead code.
+- This must NOT resemble the reference implementation's structure (it special-cased bathrooms and used a GROUPS lookup bolted onto flat categories). Our room-instance model is the differentiator.

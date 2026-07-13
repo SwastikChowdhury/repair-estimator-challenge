@@ -1,0 +1,2938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- viewport-fit=cover so we can honor iOS safe-area insets on the fixed header/footer -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Spark Homes — Repair Estimator</title>
+
+  <!-- PWA manifest + icons (all relative for GitHub Pages subpath deploys) -->
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+
+  <!-- iOS / PWA meta -->
+  <meta name="theme-color" content="#0f2a43" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Estimator" />
+
+  <style>
+    /* ============================================================= */
+    /* DESIGN TOKENS                                                  */
+    /* ============================================================= */
+    :root {
+      /* Palette — deep slate primary, single teal accent, warm neutral bg */
+      --navy: #0f2a43;
+      --accent: #0d9488;
+      --accent-600: #0b7d73;
+      --accent-050: #e6f4f2;
+      --bg: #f7f6f3;
+      --surface: #ffffff;
+      --surface-2: #f1efe9;
+      --ink: #1b2530;
+      --ink-soft: #5c6773;
+      --ink-faint: #9aa3ac;
+      --line: #e4e1d9;
+      --red: #c0392b;
+      --red-050: #fbeae7;
+      --amber: #c98a12;
+      --amber-050: #fcf3e1;
+
+      /* Type scale: 12 / 14 / 16 / 20 / 28 / 40 */
+      --fs-12: 12px;
+      --fs-14: 14px;
+      --fs-16: 16px;
+      --fs-20: 20px;
+      --fs-28: 28px;
+      --fs-40: 40px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+      /* Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 */
+      --sp-1: 4px;
+      --sp-2: 8px;
+      --sp-3: 12px;
+      --sp-4: 16px;
+      --sp-6: 24px;
+      --sp-8: 32px;
+
+      --radius: 12px;
+      --radius-sm: 10px;
+      --radius-lg: 14px;
+      --shadow: 0 2px 10px rgba(15, 42, 67, 0.08);
+
+      /* safe-area insets (0 on non-notch devices) */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* ============================================================= */
+    /* BASE                                                          */
+    /* ============================================================= */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      font-size: var(--fs-16);
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.4;
+      -webkit-text-size-adjust: 100%;
+      overscroll-behavior-y: none;
+    }
+    .tnum { font-variant-numeric: tabular-nums; }
+    button { font-family: inherit; cursor: pointer; }
+    /* Minimum 44x44 tap targets everywhere */
+    button, .tap { min-height: 44px; min-width: 44px; }
+
+    /* ============================================================= */
+    /* APP LAYOUT                                                     */
+    /* ============================================================= */
+    #app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    /* ---- Sticky header --------------------------------------------------- */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: var(--navy);
+      color: #fff;
+      padding: calc(var(--safe-top) + var(--sp-3)) var(--sp-4) var(--sp-3);
+      box-shadow: var(--shadow);
+    }
+    .header__row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+    }
+    .project-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      background: transparent;
+      border: none;
+      color: #fff;
+      padding: var(--sp-1) 0;
+      text-align: left;
+      max-width: 62%;
+    }
+    .project-btn__name {
+      font-size: var(--fs-20);
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .project-btn__chev { opacity: 0.7; font-size: var(--fs-14); }
+    .header__total { text-align: right; }
+    .header__total-label {
+      font-size: var(--fs-12);
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .header__total-value {
+      font-size: var(--fs-28);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.1;
+    }
+
+    /* progress bar */
+    .progress {
+      margin-top: var(--sp-3);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+    .progress__track {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress__fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      border-radius: 999px;
+      transition: width 250ms ease;
+    }
+    .progress__label {
+      font-size: var(--fs-12);
+      color: rgba(255,255,255,0.75);
+      white-space: nowrap;
+      min-width: 96px;
+      text-align: right;
+    }
+
+    /* ---- Room tabs ------------------------------------------------------- */
+    .roomtabs {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: var(--sp-2);
+      overflow-x: auto;
+      padding: var(--sp-3) var(--sp-4);
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .roomtabs::-webkit-scrollbar { display: none; }
+    .chip {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--ink-soft);
+      border-radius: 999px;
+      padding: var(--sp-2) var(--sp-3);
+      font-size: var(--fs-14);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .chip--active {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: #fff;
+    }
+    .chip__badge {
+      font-size: var(--fs-12);
+      font-weight: 700;
+      background: var(--surface-2);
+      color: var(--ink-soft);
+      border-radius: 999px;
+      padding: 1px var(--sp-2);
+    }
+    .chip--active .chip__badge { background: rgba(255,255,255,0.16); color: #fff; }
+    .chip--add {
+      background: transparent;
+      border: 1px dashed var(--accent);
+      color: var(--accent-600);
+    }
+
+    /* ---- List area ------------------------------------------------------- */
+    .list {
+      flex: 1;
+      padding: var(--sp-4);
+      padding-bottom: calc(96px + var(--safe-bottom));
+    }
+    .room-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
+    }
+    .room-head__title { font-size: var(--fs-20); font-weight: 700; }
+    .room-head__sub { font-size: var(--fs-12); color: var(--ink-soft); margin-top: 2px; }
+    .room-actions { display: flex; gap: var(--sp-2); }
+    .icon-btn {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      color: var(--ink-soft);
+      font-size: var(--fs-14);
+      font-weight: 600;
+      padding: 0 var(--sp-3);
+    }
+    .icon-btn--danger { color: var(--red); border-color: var(--red-050); }
+
+    /* Phase-1 placeholder card in the list area */
+    .placeholder {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: var(--sp-6) var(--sp-4);
+      text-align: center;
+      color: var(--ink-soft);
+      box-shadow: var(--shadow);
+    }
+    .placeholder__title { font-size: var(--fs-16); font-weight: 700; color: var(--ink); margin-bottom: var(--sp-2); }
+    .placeholder__hint { font-size: var(--fs-14); }
+
+    .empty {
+      text-align: center;
+      color: var(--ink-soft);
+      padding: var(--sp-8) var(--sp-4);
+    }
+    .empty__title { font-size: var(--fs-20); font-weight: 700; color: var(--ink); margin-bottom: var(--sp-2); }
+
+    /* ---- Groups (collapsible cards) ------------------------------------- */
+    .group {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: var(--sp-3);
+      overflow: hidden;
+    }
+    .group__head {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: var(--sp-3) var(--sp-4);
+      text-align: left;
+      color: var(--ink);
+    }
+    .group__chev {
+      color: var(--ink-faint);
+      font-size: var(--fs-14);
+      transition: transform 200ms ease;
+      flex: 0 0 auto;
+    }
+    .group--open .group__chev { transform: rotate(90deg); }
+    .group__title { flex: 1; font-size: var(--fs-16); font-weight: 700; }
+    .group__check {
+      flex: 0 0 auto;
+      width: 20px; height: 20px;
+      border-radius: 999px;
+      border: 1.5px solid var(--line);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: var(--fs-12); color: transparent;
+    }
+    .group__check--on { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .group__total { flex: 0 0 auto; font-weight: 700; color: var(--ink); font-size: var(--fs-14); }
+
+    /* animate expand/collapse via grid-template-rows (0fr -> 1fr) */
+    .group__body {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 200ms ease;
+    }
+    .group--open .group__body { grid-template-rows: 1fr; }
+    .group__inner { overflow: hidden; }
+    .group--open .group__inner { border-top: 1px solid var(--line); }
+
+    .noaction {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px dashed var(--line);
+      padding: var(--sp-3) var(--sp-4);
+      text-align: left;
+      color: var(--ink-soft);
+      font-size: var(--fs-14);
+      font-weight: 600;
+    }
+    .noaction--on { color: var(--accent-600); background: var(--accent-050); }
+    .noaction__mark {
+      width: 18px; height: 18px; border-radius: 4px;
+      border: 1.5px solid var(--line);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: var(--fs-12);
+    }
+    .noaction--on .noaction__mark { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .group__foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      padding: var(--sp-3) var(--sp-4);
+    }
+    .grow-link {
+      background: transparent;
+      border: none;
+      color: var(--ink-soft);
+      font-size: var(--fs-14);
+      font-weight: 700;
+      padding: var(--sp-2) 0;
+    }
+    .grow-link--accent { color: var(--accent-600); }
+
+    /* ---- Line items ----------------------------------------------------- */
+    .item {
+      display: flex;
+      gap: var(--sp-3);
+      padding: var(--sp-3) var(--sp-4);
+      border-bottom: 1px solid var(--surface-2);
+    }
+    .item:last-child { border-bottom: none; }
+    .item--checked { background: var(--accent-050); }
+    .chk {
+      flex: 0 0 auto;
+      align-self: flex-start;
+      background: transparent;
+      border: none;
+      padding: 0;
+      width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .chk__box {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      border: 2px solid var(--line);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: transparent;
+      font-size: var(--fs-16);
+      font-weight: 800;
+    }
+    .item--checked .chk__box { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .item__main { flex: 1; min-width: 0; }
+    .item__top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+    .item__name {
+      font-size: var(--fs-16);
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .item:not(.item--checked) .item__name { color: var(--ink-soft); font-weight: 500; }
+    .item__x {
+      flex: 0 0 auto;
+      background: transparent;
+      border: none;
+      color: var(--ink-faint);
+      font-size: var(--fs-20);
+      line-height: 1;
+      padding: 0 var(--sp-2);
+      min-width: 44px;
+      min-height: 44px;
+      margin: -10px -8px 0 0;
+    }
+    .item__ctl {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      margin-top: var(--sp-1);
+      flex-wrap: wrap;
+    }
+    .unit {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: var(--sp-1) var(--sp-2);
+      margin-left: -8px;
+      color: var(--ink-soft);
+      font-size: var(--fs-14);
+      display: inline-flex;
+      align-items: baseline;
+      gap: 2px;
+    }
+    .unit__u { color: var(--ink-faint); font-size: var(--fs-12); }
+    .item__add { color: var(--accent-600); font-size: var(--fs-14); font-weight: 600; }
+
+    .qtyblock { display: flex; align-items: center; gap: var(--sp-2); }
+    .qtyblock__eq { color: var(--ink-faint); }
+    .qty {
+      width: 76px;
+      font-size: var(--fs-16); /* >=16px prevents iOS zoom-on-focus */
+      text-align: right;
+      padding: var(--sp-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--ink);
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    /* remove number spinners */
+    .qty::-webkit-outer-spin-button,
+    .qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .linetotal { font-weight: 700; color: var(--ink); min-width: 56px; text-align: right; }
+
+    /* small tags/badges */
+    .tag {
+      display: inline-block;
+      font-size: var(--fs-12);
+      font-weight: 700;
+      padding: 0 6px;
+      border-radius: 999px;
+      vertical-align: middle;
+    }
+    .tag--override { background: var(--amber-050); color: var(--amber); }
+    .tag--custom { background: var(--surface-2); color: var(--ink-soft); }
+    .tag--suggested { background: var(--amber-050); color: var(--amber); }
+
+    /* ---- Equipment year field + age flag -------------------------------- */
+    .item__equip { margin-top: var(--sp-2); display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+    .yearfield { display: inline-flex; align-items: center; gap: var(--sp-2); }
+    .yearfield__label { font-size: var(--fs-12); color: var(--ink-faint); font-weight: 600; }
+    .year-input {
+      width: 84px;
+      font-size: var(--fs-16);
+      text-align: center;
+      padding: var(--sp-1) var(--sp-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--ink);
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    .year-input::-webkit-outer-spin-button,
+    .year-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .agewarn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      flex-wrap: wrap;
+      margin: var(--sp-2) 0 0 56px;
+      padding: var(--sp-2) var(--sp-3);
+      background: var(--amber-050);
+      border: 1px solid #f0dcae;
+      border-radius: var(--radius-sm);
+    }
+    .agewarn__text { font-size: var(--fs-12); font-weight: 700; color: var(--amber); }
+    .agewarn__add {
+      background: var(--amber);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: var(--fs-12);
+      font-weight: 700;
+      padding: var(--sp-2) var(--sp-3);
+      min-height: 36px;
+    }
+
+    /* equipment photo pill */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-1);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--ink-soft);
+      font-size: var(--fs-12);
+      font-weight: 700;
+      padding: var(--sp-1) var(--sp-3);
+      min-height: 36px;
+    }
+
+    /* ---- Photo thumbnails ---------------------------------------------- */
+    .thumbs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sp-2);
+      margin-bottom: var(--sp-2);
+      max-height: 46vh;
+      overflow-y: auto;
+    }
+    .thumb {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .thumb__del {
+      position: absolute;
+      top: 4px; right: 4px;
+      width: 32px; height: 32px;
+      min-width: 32px; min-height: 32px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(15, 42, 67, 0.78);
+      color: #fff;
+      font-size: var(--fs-20);
+      line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .photos-empty {
+      text-align: center;
+      color: var(--ink-soft);
+      padding: var(--sp-6) var(--sp-4);
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+    }
+
+    /* ---- Settings ------------------------------------------------------ */
+    .settings-block { margin-bottom: var(--sp-6); }
+    .settings-block__label {
+      font-size: var(--fs-12);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--ink-soft);
+      font-weight: 700;
+      margin-bottom: var(--sp-2);
+    }
+    .meter { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+    .meter__fill { height: 100%; background: var(--accent); border-radius: 999px; }
+    .meter__fill--warn { background: var(--red); }
+
+    .price-list { max-height: 44vh; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+    .price-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      padding: var(--sp-2) var(--sp-3);
+      border-bottom: 1px solid var(--surface-2);
+    }
+    .price-row:last-child { border-bottom: none; }
+    .price-row__main { flex: 1; min-width: 0; }
+    .price-row__name { font-size: var(--fs-14); font-weight: 600; }
+    .price-row__unit { font-size: var(--fs-12); color: var(--ink-faint); }
+    .price-input {
+      width: 96px;
+      font-size: var(--fs-16);
+      text-align: right;
+      padding: var(--sp-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--ink);
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    .price-input::-webkit-outer-spin-button,
+    .price-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    /* ---- Toast --------------------------------------------------------- */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(84px + var(--safe-bottom));
+      transform: translate(-50%, 12px);
+      max-width: 88%;
+      background: var(--navy);
+      color: #fff;
+      font-size: var(--fs-14);
+      font-weight: 600;
+      padding: var(--sp-3) var(--sp-4);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 20px rgba(15,42,67,0.3);
+      opacity: 0;
+      transition: opacity 200ms ease, transform 200ms ease;
+      z-index: 90;
+      text-align: center;
+    }
+    .toast--show { opacity: 1; transform: translate(-50%, 0); }
+    .toast--error { background: var(--red); }
+
+    /* ---- Deal Guard bar + sheet ---------------------------------------- */
+    .dg-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+      width: 100%;
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: var(--sp-2) var(--sp-4);
+      text-align: left;
+    }
+    .dg-bar__col { display: flex; flex-direction: column; }
+    .dg-bar__k { font-size: var(--fs-12); color: rgba(255,255,255,0.6); }
+    .dg-bar__v { font-size: var(--fs-16); font-weight: 800; }
+    .dg-bar .dg-neg { color: #ff9e91; }
+    .dg-bar__more { margin-left: auto; font-size: var(--fs-12); font-weight: 700; color: var(--accent); }
+    .dg-bar--empty { justify-content: space-between; }
+    .dg-bar__title { font-size: var(--fs-14); font-weight: 800; }
+    .dg-bar__hint { font-size: var(--fs-12); color: rgba(255,255,255,0.6); }
+
+    .dg-grid { display: flex; flex-direction: column; gap: var(--sp-2); margin: var(--sp-2) 0 var(--sp-4); }
+    .dg-stat {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-3);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+    .dg-stat--hero { background: var(--accent-050); border-color: var(--accent); }
+    .dg-stat__k { font-size: var(--fs-14); color: var(--ink-soft); font-weight: 600; }
+    .dg-stat--hero .dg-stat__k { color: var(--accent-600); }
+    .dg-stat__v { font-size: var(--fs-20); font-weight: 800; color: var(--ink); }
+    .dg-stat--hero .dg-stat__v { color: var(--accent-600); }
+    .dg-neg { color: var(--red) !important; }
+    .dg-range { font-size: var(--fs-14); color: var(--ink-soft); margin-bottom: var(--sp-3); }
+    .dg-range .tnum { font-weight: 700; color: var(--ink); }
+    .dg-warn {
+      background: var(--amber-050);
+      border: 1px solid #f0dcae;
+      color: var(--amber);
+      border-radius: var(--radius-sm);
+      padding: var(--sp-3);
+      font-size: var(--fs-14);
+    }
+    .dg-ok {
+      background: var(--accent-050);
+      border: 1px solid var(--accent);
+      color: var(--accent-600);
+      border-radius: var(--radius-sm);
+      padding: var(--sp-3);
+      font-size: var(--fs-14);
+      font-weight: 600;
+    }
+
+    /* ---- Bottom bar (Deal Guard + footer) ------------------------------- */
+    .bottombar {
+      position: sticky;
+      bottom: 0;
+      z-index: 20;
+    }
+    .footer {
+      background: var(--surface);
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: var(--sp-2);
+      padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + var(--safe-bottom));
+    }
+    .footer__btn {
+      flex: 1;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      border-radius: var(--radius-sm);
+      font-size: var(--fs-14);
+      font-weight: 700;
+    }
+    .footer__btn--primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ============================================================= */
+    /* MODAL / SHEET                                                  */
+    /* ============================================================= */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(15, 42, 67, 0.45);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .overlay--open { display: flex; }
+    .sheet {
+      width: 100%;
+      max-width: 560px;
+      background: var(--surface);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: var(--sp-4) var(--sp-4) calc(var(--sp-4) + var(--safe-bottom));
+      box-shadow: 0 -4px 24px rgba(15,42,67,0.18);
+      animation: sheet-up 200ms ease;
+    }
+    @keyframes sheet-up { from { transform: translateY(16px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
+    .sheet__title { font-size: var(--fs-20); font-weight: 700; margin: 0 0 var(--sp-4); }
+    .sheet__label { display: block; font-size: var(--fs-12); color: var(--ink-soft); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em; }
+    .field {
+      width: 100%;
+      font-size: var(--fs-16); /* >=16px prevents iOS zoom-on-focus */
+      padding: var(--sp-3);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--ink);
+      margin-bottom: var(--sp-4);
+    }
+    .sheet__actions { display: flex; gap: var(--sp-2); }
+    .btn {
+      flex: 1;
+      border-radius: var(--radius-sm);
+      font-size: var(--fs-16);
+      font-weight: 700;
+      padding: var(--sp-3);
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+    }
+    .btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn--danger { background: var(--red); border-color: var(--red); color: #fff; }
+    .btn--ghost { background: transparent; }
+
+    /* project list rows inside the projects sheet */
+    .proj-list { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4); max-height: 46vh; overflow-y: auto; }
+    .proj-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: var(--sp-3);
+      background: var(--surface);
+    }
+    .proj-row--active { border-color: var(--accent); background: var(--accent-050); }
+    .proj-row__main { flex: 1; text-align: left; background: transparent; border: none; padding: 0; }
+    .proj-row__name { font-size: var(--fs-16); font-weight: 700; color: var(--ink); }
+    .proj-row__meta { font-size: var(--fs-12); color: var(--ink-soft); margin-top: 2px; }
+    .proj-row__total { font-size: var(--fs-14); font-weight: 700; color: var(--accent-600); }
+    .mini-btn {
+      background: transparent;
+      border: none;
+      color: var(--ink-soft);
+      font-size: var(--fs-14);
+      font-weight: 700;
+      padding: var(--sp-2);
+    }
+    .mini-btn--danger { color: var(--red); }
+
+    /* room-type picker grid */
+    .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+    .type-btn {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: var(--sp-3);
+      font-size: var(--fs-14);
+      font-weight: 700;
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .divider { height: 1px; background: var(--line); margin: var(--sp-4) 0; border: none; }
+    .hint { font-size: var(--fs-12); color: var(--ink-faint); }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Rendered by JS. Static shell nodes below are populated on render(). -->
+    <header class="header" id="header"></header>
+    <nav class="roomtabs" id="roomtabs" aria-label="Rooms"></nav>
+    <main class="list" id="list"></main>
+    <div class="bottombar" id="bottombar">
+      <div class="dealguard" id="dealguard"></div>
+      <footer class="footer" id="footer"></footer>
+    </div>
+  </div>
+
+  <!-- Reusable overlay for modals/sheets -->
+  <div class="overlay" id="overlay" data-action="overlay-backdrop">
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <!-- Vendored libraries (relative paths, precached by the service worker; never a CDN) -->
+  <script src="./vendor/exceljs.min.js"></script>
+  <script src="./vendor/jszip.min.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================= */
+  /* DATA — repair catalog (copied verbatim from data/repair-items.js) */
+  /* Source of record stays at data/repair-items.js; never hand-edit costs. */
+  /* ============================================================= */
+  const REPAIR_ITEMS = [
+    { id: 'ig-01', name: 'Refinish Hardwood Floor', cost: 2.35, unit: 'sqft' },
+    { id: 'ig-02', name: 'New Hardwoods 1.5"', cost: 10.0, unit: 'sqft' },
+    { id: 'ig-03', name: 'New Hardwoods 2"', cost: 4.75, unit: 'sqft' },
+    { id: 'ig-04', name: 'Hardwood Splicing', cost: 8.4, unit: 'sqft' },
+    { id: 'ig-05', name: 'Vinyl Plank', cost: 2.5, unit: 'sqft' },
+    { id: 'ig-06', name: 'Carpet', cost: 1.9, unit: 'sqft' },
+    { id: 'ig-07', name: 'Interior Paint — 2 Tone', cost: 2.95, unit: 'sqft' },
+    { id: 'ig-08', name: 'Drywall Repair', cost: 900.0, unit: '1,000 sqft' },
+    { id: 'ig-09', name: 'Wallpaper Removal', cost: 250.0, unit: 'room' },
+    { id: 'ig-10', name: 'Interior Door — Hollow Slab', cost: 125.0, unit: 'ea.' },
+    { id: 'ig-11', name: 'Interior Door Hardware (Knob + Hinges + Labor)', cost: 25.0, unit: 'ea.' },
+    { id: 'ig-12', name: 'Bifold Door with Framing', cost: 400.0, unit: 'ea.' },
+    { id: 'ig-13', name: 'Interior Door — Pre-hung', cost: 200.0, unit: 'ea.' },
+    { id: 'ig-14', name: 'Front Entry Door', cost: 475.0, unit: 'ea.' },
+    { id: 'ig-15', name: 'Front Entry Door Hardware', cost: 80.0, unit: 'ea.' },
+    { id: 'ig-16', name: 'Exterior Door Hardware', cost: 75.0, unit: 'handle' },
+    { id: 'ig-17', name: 'Exterior Insulated Side Door (Installed)', cost: 500.0, unit: 'ea.' },
+    { id: 'ig-18', name: 'Sliding Glass Door', cost: 1025.0, unit: 'ea.' },
+    { id: 'ig-19', name: 'Trim Out (Casing, Crown, Baseboard)', cost: 3.75, unit: 'LF' },
+    { id: 'ig-20', name: 'MISC / Punch List', cost: 2650.0, unit: 'flat' },
+    { id: 'ig-21', name: 'Finish Out Labor', cost: 1350.0, unit: 'flat' },
+    { id: 'ig-22', name: 'Light Fixtures', cost: 70.0, unit: '100 sqft' },
+    { id: 'ig-23', name: 'Bedbug Spray / Heat Treat', cost: 475.0, unit: 'ea.' },
+    { id: 'ig-24', name: 'Termite Treatment', cost: 650.0, unit: 'ea.' },
+    { id: 'ig-25', name: 'Demo', cost: 1375.0, unit: 'variable' },
+    { id: 'ig-26', name: 'Haul Off', cost: 725.0, unit: 'load' },
+    { id: 'ig-27', name: 'Final Cleaning', cost: 325.0, unit: 'flat' },
+    { id: 'ig-28', name: 'Staging', cost: 0.9, unit: 'sqft' },
+    { id: 'kt-01', name: 'Hinges and Pulls', cost: 275.0, unit: 'kitchen' },
+    { id: 'kt-02', name: 'Cabinets Uppers', cost: 125.0, unit: 'LF' },
+    { id: 'kt-03', name: 'Cabinets Lowers', cost: 150.0, unit: 'LF' },
+    { id: 'kt-04', name: 'Cabinet Door Faces Only', cost: 80.0, unit: 'door' },
+    { id: 'kt-05', name: 'Cabinets (Labor & Paint)', cost: 1100.0, unit: 'kitchen' },
+    { id: 'kt-06', name: 'Granite + 4" Splash Guard', cost: 40.0, unit: 'LF' },
+    { id: 'kt-07', name: 'Backsplash', cost: 725.0, unit: 'house' },
+    { id: 'kt-08', name: 'Misc Woodwork', cost: 500.0, unit: 'variable' },
+    { id: 'kt-09', name: 'Tile — Large Areas', cost: 6.45, unit: 'sqft' },
+    { id: 'kt-10', name: 'Tile — Small Areas', cost: 10.0, unit: 'sqft' },
+    { id: 'kt-11', name: 'Undermount Kitchen Sink', cost: 325.0, unit: 'ea.' },
+    { id: 'kt-12', name: 'Microwave / Hood', cost: 500.0, unit: 'ea.' },
+    { id: 'kt-13', name: 'Range', cost: 725.0, unit: 'ea.' },
+    { id: 'kt-14', name: 'Wall Oven', cost: 1075.0, unit: 'ea.' },
+    { id: 'kt-15', name: 'Cooktop', cost: 550.0, unit: 'ea.' },
+    { id: 'kt-16', name: 'Dishwasher', cost: 575.0, unit: 'ea.' },
+    { id: 'kt-17', name: 'Fridge', cost: 1175.0, unit: 'ea.' },
+    { id: 'ba-01', name: 'Granite ($/LF)', cost: 35.0, unit: 'LF' },
+    { id: 'ba-02', name: 'New Bottom Vanity', cost: 125.0, unit: 'LF' },
+    { id: 'ba-03', name: 'Home Depot Vanity w/ Sink (18")', cost: 225.0, unit: 'ea.' },
+    { id: 'ba-04', name: 'Toilet', cost: 150.0, unit: 'ea.' },
+    { id: 'ba-05', name: 'Tile — Large Areas', cost: 5.8, unit: 'sqft' },
+    { id: 'ba-06', name: 'Tile — Small Areas', cost: 10.0, unit: 'sqft' },
+    { id: 'ba-07', name: 'Reglaze Tub or Chemical Clean', cost: 350.0, unit: 'ea.' },
+    { id: 'ba-08', name: 'Reglaze Tub + Surround', cost: 750.0, unit: 'ea.' },
+    { id: 'ba-09', name: 'Reglaze Shower', cost: 1325.0, unit: 'ea.' },
+    { id: 'ba-10', name: 'Tiled Shower Tear Out + Tile Install', cost: 3100.0, unit: 'ea.' },
+    { id: 'ba-11', name: 'Tub Tile Surround Tear Out + Tile Install (incl. tub)', cost: 2250.0, unit: 'ea.' },
+    { id: 'ba-12', name: 'Shower Plastic Insert Tear Out + New Insert', cost: 825.0, unit: 'ea.' },
+    { id: 'ba-13', name: 'Tub Tear Out + New Insert & Tub', cost: 1575.0, unit: 'ea.' },
+    { id: 'ba-14', name: 'Undermount Sink', cost: 150.0, unit: 'ea.' },
+    { id: 'ba-15', name: 'Mirror', cost: 200.0, unit: 'ea.' },
+    { id: 'ba-16', name: 'HVL (needed if no window)', cost: 275.0, unit: 'ea.' },
+    { id: 'as-01', name: 'Furnace', cost: 3350.0, unit: 'ea.' },
+    { id: 'as-02', name: 'Condensing Unit', cost: 3300.0, unit: 'ea.' },
+    { id: 'as-03', name: 'Package Unit', cost: 4700.0, unit: 'ea.' },
+    { id: 'as-04', name: 'A-Coil (if no condensing unit)', cost: 1625.0, unit: 'ea.' },
+    { id: 'as-05', name: 'Ducting (if NO HVAC)', cost: 3200.0, unit: 'ea.' },
+    { id: 'as-06', name: 'Duct Cleaning — Floor Vents', cost: 550.0, unit: 'ea.' },
+    { id: 'as-07', name: 'Window Unit Replacement 220', cost: 575.0, unit: 'ea.' },
+    { id: 'as-08', name: 'Hot Water Heater w/ Expansion Tank', cost: 1425.0, unit: 'ea.' },
+    { id: 'as-09', name: 'Hot Water Heater Expansion Tank Only', cost: 200.0, unit: 'ea.' },
+    { id: 'as-10', name: 'Switches / Outlets', cost: 1400.0, unit: 'house' },
+    { id: 'as-11', name: 'Standard Electrical', cost: 1650.0, unit: 'house' },
+    { id: 'as-12', name: 'Subfloor', cost: 8.2, unit: 'sqft' },
+    { id: 'as-13', name: 'Framing', cost: 950.0, unit: 'variable' },
+    { id: 'as-14', name: 'Structural (Pier)', cost: 375.0, unit: 'pier' },
+    { id: 'as-15', name: 'Structural Foam Injection', cost: 5.85, unit: 'sqft of affected area' },
+    { id: 'as-16', name: 'Roof', cost: 1100.0, unit: '225 sqft L&M' },
+    { id: 'as-17', name: 'Plumbing', cost: 1000.0, unit: 'variable' },
+    { id: 'as-18', name: 'Electrical Panel Swap to 200A', cost: 2350.0, unit: 'ea.' },
+    { id: 'as-19', name: 'Full Electrical Rewire (to Studs)', cost: 5.65, unit: 'sqft' },
+    { id: 'as-20', name: 'Full Electrical Rewire (leaving Drywall)', cost: 9.15, unit: 'sqft' },
+    { id: 'as-21', name: 'Wall Insulation (to Studs)', cost: 1.2, unit: 'sqft' },
+    { id: 'as-22', name: 'Attic Insulation', cost: 1225.0, unit: '1,600 sqft house' },
+    { id: 'as-23', name: 'New Drywall to Studs (L&M)', cost: 5.2, unit: 'sqft' },
+    { id: 'as-24', name: 'Aluminum Wiring', cost: 2450.0, unit: 'variable' },
+    { id: 'ex-01', name: 'Fence Repair — Chain Link / Wood Gate', cost: 225.0, unit: 'variable' },
+    { id: 'ex-02', name: 'Fence Repair — Chain Link', cost: 275.0, unit: 'LF' },
+    { id: 'ex-03', name: 'Fence Repair — Privacy 6ft', cost: 30.0, unit: 'LF' },
+    { id: 'ex-04', name: 'Landscaping', cost: 450.0, unit: 'variable' },
+    { id: 'ex-05', name: 'Vinyl Siding (10\'x10\')', cost: 300.0, unit: 'square' },
+    { id: 'ex-06', name: 'Tuck Pointing', cost: 225.0, unit: 'variable' },
+    { id: 'ex-07', name: 'Exterior Paint', cost: 2.6, unit: 'sqft' },
+    { id: 'ex-08', name: 'Exterior Wood Repair', cost: 525.0, unit: 'variable' },
+    { id: 'ex-09', name: 'Siding Repair (10\'x10\')', cost: 975.0, unit: 'section' },
+    { id: 'ex-10', name: 'Tree Trimming', cost: 450.0, unit: 'variable' },
+    { id: 'ex-11', name: 'Tree Removal (w/o stump)', cost: 1450.0, unit: 'tree' },
+    { id: 'ex-12', name: 'Stump Grinding', cost: 250.0, unit: 'stump' },
+    { id: 'ex-13', name: 'Aluminum Window Paint (Int/Ext)', cost: 700.0, unit: 'house' },
+    { id: 'ex-14', name: 'Windows (3x5 sash)', cost: 425.0, unit: 'ea.' },
+    { id: 'ex-15', name: 'Window Repair — Non-Insulated (6x6+)', cost: 35.0, unit: 'sf' },
+    { id: 'ex-16', name: 'Window Repair — Insulated (6x6+)', cost: 40.0, unit: 'sf' },
+    { id: 'ex-17', name: 'Aluminum Framed Window Pane', cost: 100.0, unit: 'pane' },
+    { id: 'ex-18', name: 'Guttering', cost: 4.15, unit: 'LF' },
+    { id: 'ex-19', name: 'Concrete w/ Demo', cost: 200.0, unit: 'sqft' },
+    { id: 'ex-20', name: 'Mowing (summer, every 2 weeks)', cost: 45.0, unit: 'mowing' },
+    { id: 'ex-21', name: 'Garage Door — 1 Car', cost: 975.0, unit: 'ea.' },
+    { id: 'ex-22', name: 'Garage Door — 2 Car (Installed)', cost: 1225.0, unit: 'ea.' },
+    { id: 'ex-23', name: 'Garage Conversion', cost: 8850.0, unit: 'ea.' },
+  ];
+
+  // Fast lookup by id (used everywhere for price/name/unit resolution).
+  const ITEM_BY_ID = REPAIR_ITEMS.reduce((m, it) => { m[it.id] = it; return m; }, {});
+
+  /* Room TYPES are static config. Groups + item ids are added in Phase 2;
+     here we only need the metadata to seed instances and render tabs.
+     `multi` = auto-numbered instances ("Bathroom 1"). Every type flows
+     through the same code path — no type is special-cased. */
+  const ROOM_TYPES = {
+    interior: { name: 'Interior / General', multi: false },
+    kitchen:  { name: 'Kitchen',            multi: false },
+    bathroom: { name: 'Bathroom',           multi: true  },
+    bedroom:  { name: 'Bedroom',            multi: true  },
+    living:   { name: 'Living / Common Area', multi: true },
+    systems:  { name: 'Systems & Structure', multi: false },
+    exterior: { name: 'Exterior',           multi: false },
+  };
+  const ROOM_TYPE_ORDER = ['interior', 'kitchen', 'bathroom', 'bedroom', 'living', 'systems', 'exterior'];
+
+  // Expand an inclusive id range, e.g. range('ig',1,6) -> ['ig-01'..'ig-06'].
+  function range(prefix, a, b) {
+    const out = [];
+    for (let i = a; i <= b; i++) out.push(prefix + '-' + String(i).padStart(2, '0'));
+    return out;
+  }
+
+  /* Group config per room TYPE (item ids reference the catalog).
+     The 19 named groups from the brief all exist; the two catch-all groups
+     ("General & Site Work", "Exterior General") are additions so every catalog
+     item lives in a group. Group ids are unique within a room type.
+     The same catalog item may appear in multiple groups/types — selections are
+     keyed roomId:itemId, so instances never collide. */
+  const ROOM_GROUPS = {
+    interior: [
+      { id: 'ig-flooring', name: 'Flooring',            items: range('ig', 1, 6) },
+      { id: 'ig-paint',    name: 'Paint & Wall Repair', items: range('ig', 7, 9) },
+      { id: 'ig-doors',    name: 'Doors',               items: range('ig', 10, 18) },
+      { id: 'ig-pest',     name: 'Pest Control',        items: ['ig-23', 'ig-24'] },
+      { id: 'ig-general',  name: 'General & Site Work',  items: range('ig', 19, 22).concat(range('ig', 25, 28)) },
+    ],
+    kitchen: [
+      { id: 'kt-cabinets',   name: 'Cabinets',           items: range('kt', 1, 5) },
+      { id: 'kt-counter',    name: 'Countertops & Tile', items: range('kt', 6, 10) },
+      { id: 'kt-appliances', name: 'Appliances',         items: range('kt', 11, 17) },
+    ],
+    bathroom: [
+      { id: 'ba-vanity', name: 'Vanity & Countertop', items: ['ba-01', 'ba-02', 'ba-03', 'ba-14', 'ba-04', 'ba-15', 'ba-16'] },
+      { id: 'ba-tub',    name: 'Tub & Shower',        items: range('ba', 7, 13) },
+      { id: 'ba-tile',   name: 'Tile',                items: ['ba-05', 'ba-06'] },
+    ],
+    bedroom: [
+      { id: 'bd-flooring', name: 'Flooring', items: range('ig', 1, 6) },
+      { id: 'bd-paint',    name: 'Paint',    items: range('ig', 7, 9) },
+      { id: 'bd-doors',    name: 'Doors',    items: ['ig-10', 'ig-11', 'ig-13'] },
+      { id: 'bd-closet',   name: 'Closet',   items: ['ig-12'] },
+    ],
+    living: [
+      { id: 'lv-flooring', name: 'Flooring', items: range('ig', 1, 6) },
+      { id: 'lv-paint',    name: 'Paint',    items: range('ig', 7, 9) },
+      { id: 'lv-doors',    name: 'Doors',    items: range('ig', 10, 13) },
+      { id: 'lv-lighting', name: 'Lighting', items: ['ig-22'] },
+    ],
+    systems: [
+      { id: 'as-hvac',       name: 'HVAC',                 items: range('as', 1, 9) },
+      { id: 'as-electrical', name: 'Electrical',           items: ['as-10', 'as-11', 'as-18', 'as-19', 'as-20', 'as-24'] },
+      { id: 'as-structural', name: 'Structural',           items: range('as', 12, 17) },
+      { id: 'as-insulation', name: 'Insulation & Drywall', items: ['as-21', 'as-22', 'as-23'] },
+    ],
+    exterior: [
+      { id: 'ex-fence',   name: 'Fence',           items: range('ex', 1, 3) },
+      { id: 'ex-siding',  name: 'Siding',          items: range('ex', 5, 9) },
+      { id: 'ex-windows', name: 'Windows',         items: range('ex', 13, 17) },
+      { id: 'ex-garage',  name: 'Garage',          items: range('ex', 21, 23) },
+      { id: 'ex-trees',   name: 'Trees & Yard',    items: ['ex-04', 'ex-10', 'ex-11', 'ex-12', 'ex-20'] },
+      { id: 'ex-general', name: 'Exterior General', items: ['ex-18', 'ex-19'] },
+    ],
+  };
+
+  function groupsForRoom(room) { return ROOM_GROUPS[room.type] || []; }
+
+  /* Equipment items carry a year field (age flags) and support their own
+     photos: Furnace, Condensing Unit, Water Heater, Roof. */
+  const EQUIPMENT_ITEMS = ['as-01', 'as-02', 'as-08', 'as-16'];
+  function isEquipment(itemId) { return EQUIPMENT_ITEMS.indexOf(itemId) >= 0; }
+
+  // Expected service lifespans (years) for the age-flag heuristic.
+  const LIFESPANS = { 'as-01': 18, 'as-02': 15, 'as-08': 11, 'as-16': 22 };
+  const EQUIP_LABELS = { 'as-01': 'Furnace', 'as-02': 'Condensing unit', 'as-08': 'Water heater', 'as-16': 'Roof' };
+  const CURRENT_YEAR = new Date().getFullYear();
+
+  // Catalog flooring items (per-sqft) used by the quantity pre-fill.
+  const FLOORING_IDS = ['ig-01', 'ig-02', 'ig-03', 'ig-04', 'ig-05', 'ig-06'];
+
+  /* ============================================================= */
+  /* STATE                                                         */
+  /* ============================================================= */
+  const SK_DATA = 'spark:data';            // { projects: {id: project}, activeProjectId }
+  const SK_PRICES = 'spark:globalPrices';  // { itemId: number }  (live across all projects)
+
+  const state = {
+    projects: {},          // id -> project (see data model in 00-architecture.mdc)
+    activeProjectId: null,
+    globalPriceOverrides: {},
+    // transient UI state; not persisted. expandedGroups keyed 'roomId:groupId' -> bool.
+    ui: { activeRoomId: null, expandedGroups: {} },
+  };
+
+  /* ============================================================= */
+  /* UTILITIES                                                     */
+  /* ============================================================= */
+  function genId(prefix) {
+    return (prefix || 'id') + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+  }
+
+  // Escape user-supplied strings before injecting into HTML templates.
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // UI money: whole dollars with thousands separators, no cents (totals).
+  function money(n) {
+    const v = Math.round(Number(n) || 0);
+    return '$' + v.toLocaleString('en-US');
+  }
+
+  // Unit cost money: cents allowed (design system permits cents on unit costs).
+  function unitMoney(n) {
+    const v = Number(n) || 0;
+    // Show cents only when the value actually has a fractional part.
+    const hasCents = Math.round(v * 100) % 100 !== 0;
+    return '$' + v.toLocaleString('en-US', {
+      minimumFractionDigits: hasCents ? 2 : 0,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  /* ============================================================= */
+  /* MATH — small pure functions (no calculation inside templates)  */
+  /* ============================================================= */
+
+  // Effective unit cost precedence: per-item override -> global override -> catalog default.
+  function effectiveCost(project, roomId, itemId) {
+    const sel = project.selections[roomId + ':' + itemId];
+    if (sel && sel.unitCostOverride != null) return sel.unitCostOverride;
+    if (state.globalPriceOverrides[itemId] != null) return state.globalPriceOverrides[itemId];
+    const custom = findCustomItem(project, roomId, itemId);
+    if (custom) return custom.cost;
+    const base = ITEM_BY_ID[itemId];
+    return base ? base.cost : 0;
+  }
+
+  function findCustomItem(project, roomId, itemId) {
+    return project.customItems.find(function (c) { return c.id === itemId && c.roomId === roomId; }) || null;
+  }
+
+  function selKey(roomId, itemId) { return roomId + ':' + itemId; }
+  function getSel(project, roomId, itemId) { return project.selections[selKey(roomId, itemId)]; }
+  function ensureSel(project, roomId, itemId) {
+    const k = selKey(roomId, itemId);
+    if (!project.selections[k]) project.selections[k] = { checked: false, qty: null, unitCostOverride: null, year: null };
+    return project.selections[k];
+  }
+  function isRemoved(project, roomId, itemId) { return project.removedItemIds.indexOf(selKey(roomId, itemId)) >= 0; }
+  function customItemsInGroup(project, roomId, groupId) {
+    return project.customItems.filter(function (c) { return c.roomId === roomId && c.groupId === groupId; });
+  }
+  // "No action needed" is stored as a reserved sentinel selection so it stays
+  // inside the unified selections map (no extra top-level bookkeeping).
+  function naItemId(groupId) { return 'na:' + groupId; }
+
+  // Resolve display metadata for either a catalog or custom item.
+  function itemMeta(project, roomId, itemId) {
+    const custom = findCustomItem(project, roomId, itemId);
+    if (custom) return { name: custom.name, unit: custom.unit, isCustom: true };
+    const base = ITEM_BY_ID[itemId];
+    return { name: base ? base.name : itemId, unit: base ? base.unit : '', isCustom: false };
+  }
+
+  // Ordered visible item ids for a group (catalog first, then customs), minus hidden.
+  function groupItemIds(project, roomId, group) {
+    const catalog = group.items.filter(function (id) { return !isRemoved(project, roomId, id); });
+    const customs = customItemsInGroup(project, roomId, group.id).map(function (c) { return c.id; });
+    return catalog.concat(customs);
+  }
+
+  // Line total = qty × effectiveCost. No minimum-price logic.
+  function lineTotal(project, roomId, itemId) {
+    const sel = project.selections[roomId + ':' + itemId];
+    if (!sel || !sel.checked) return 0;
+    const qty = Number(sel.qty) || 0;
+    return qty * effectiveCost(project, roomId, itemId);
+  }
+
+  // Sum of all checked line items in a room instance.
+  function roomTotal(project, room) {
+    let sum = 0;
+    for (const key in project.selections) {
+      if (key.indexOf(room.id + ':') === 0) {
+        const itemId = key.slice(room.id.length + 1);
+        sum += lineTotal(project, room.id, itemId);
+      }
+    }
+    return sum;
+  }
+
+  // Grand total across the whole project.
+  function projectTotal(project) {
+    return project.rooms.reduce(function (sum, r) { return sum + roomTotal(project, r); }, 0);
+  }
+
+  // Sum of one group's checked line items (catalog + custom).
+  function groupTotal(project, room, group) {
+    return groupItemIds(project, room.id, group).reduce(function (sum, id) {
+      return sum + lineTotal(project, room.id, id);
+    }, 0);
+  }
+
+  // A group is reviewed when "No action needed" is on OR any item in it is checked.
+  function isGroupReviewed(project, room, group) {
+    const na = getSel(project, room.id, naItemId(group.id));
+    if (na && na.checked) return true;
+    return groupItemIds(project, room.id, group).some(function (id) {
+      const s = getSel(project, room.id, id);
+      return s && s.checked;
+    });
+  }
+
+  /* Progress = reviewed groups / total groups across ALL rooms & instances.
+     Adding a room grows the denominator (intended). Custom items live inside
+     existing groups, so they never change the denominator. */
+  function progress(project) {
+    let total = 0, reviewed = 0;
+    project.rooms.forEach(function (room) {
+      groupsForRoom(room).forEach(function (group) {
+        total++;
+        if (isGroupReviewed(project, room, group)) reviewed++;
+      });
+    });
+    return { reviewed: reviewed, total: total, pct: total ? Math.round((reviewed / total) * 100) : 0 };
+  }
+
+  /* Quantity pre-fill — suggested starting qty from project square footage.
+     Suggestions are hints only: shown badged, fully editable, never auto-checked. */
+  function suggestedQty(project, itemId) {
+    const sqft = Number(project.meta.sqft) || 0;
+    if (!sqft) return null;
+    if (FLOORING_IDS.indexOf(itemId) >= 0) return Math.round(sqft);           // flooring ≈ sqft
+    if (itemId === 'ig-07') return Math.round(2.75 * sqft);                    // interior paint ≈ 2.75 × sqft
+    if (itemId === 'ig-19') return Math.round(1.5 * 4 * Math.sqrt(sqft));      // trim LF ≈ 1.5 × perimeter of square footprint
+    if (itemId === 'as-16') return Math.max(1, Math.round(sqft / 225));        // roof (unit is per 225 sqft)
+    if (itemId === 'as-22') return Math.max(1, Math.round(sqft / 1600));       // attic insulation (per ~1,600 sqft)
+    return null;
+  }
+
+  // Equipment age heuristic. Flags when age ≥ lifespan − 2.
+  function ageFlag(project, roomId, itemId) {
+    const sel = getSel(project, roomId, itemId);
+    const year = sel && sel.year != null ? Number(sel.year) : null;
+    const lifespan = LIFESPANS[itemId];
+    if (!year || !lifespan) return null;
+    const age = CURRENT_YEAR - year;
+    if (age < 0) return null;
+    return age >= lifespan - 2 ? { age: age, lifespan: lifespan } : null;
+  }
+
+  // Is a group (by id) marked "No action needed" in any room instance?
+  function groupNa(project, groupId) {
+    return project.rooms.some(function (room) {
+      const s = getSel(project, room.id, naItemId(groupId));
+      return !!(s && s.checked);
+    });
+  }
+
+  // Is a group (by id) reviewed in any room instance?
+  function groupReviewedAnywhere(project, groupId) {
+    return project.rooms.some(function (room) {
+      return groupsForRoom(room).some(function (g) {
+        return g.id === groupId && isGroupReviewed(project, room, g);
+      });
+    });
+  }
+
+  // Big-ticket systems that should be reviewed before exporting an offer.
+  function unreviewedCritical(project) {
+    const out = [];
+    [['as-hvac', 'HVAC'], ['as-electrical', 'Electrical'], ['as-structural', 'Structural']].forEach(function (pair) {
+      if (!groupReviewedAnywhere(project, pair[0])) out.push(pair[1]);
+    });
+    // Roof (as-16) is its own line inside Structural — check it explicitly.
+    // Treat it as reviewed if it's checked, its install year is filled in
+    // (evidence the roof was assessed), or Structural is marked no-action.
+    const roofChecked = project.rooms.some(function (room) {
+      const s = getSel(project, room.id, 'as-16');
+      return !!(s && s.checked);
+    });
+    const roofYearFilled = project.rooms.some(function (room) {
+      const s = getSel(project, room.id, 'as-16');
+      return !!(s && s.year != null);
+    });
+    if (!roofChecked && !roofYearFilled && !groupNa(project, 'as-structural')) out.push('Roof');
+    return out;
+  }
+
+  /* Deal Guard — the 70% rule and margin, with a confidence range that
+     tightens as more groups are reviewed. All pure math. */
+  function dealGuard(project) {
+    const arv = Number(project.meta.arv) || 0;
+    const repairs = projectTotal(project);
+    const maxOffer = arv ? (arv * 0.70 - repairs) : 0;
+    const margin = arv ? (arv - maxOffer - repairs) : 0; // == 0.30 × ARV by the 70% rule
+    const prog = progress(project);
+    const unrevFrac = prog.total ? (prog.total - prog.reviewed) / prog.total : 0;
+    const rangePct = 0.05 + 0.15 * unrevFrac; // ±5% baseline, widening with unreviewed groups
+    return {
+      arv: arv, repairs: repairs, maxOffer: maxOffer, margin: margin,
+      rangePct: rangePct, low: repairs * (1 - rangePct), high: repairs * (1 + rangePct),
+    };
+  }
+
+  /* ============================================================= */
+  /* STORAGE — localStorage load/save (debounced) + lifecycle saves */
+  /* ============================================================= */
+  let saveTimer = null;
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(SK_DATA);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        state.projects = parsed.projects || {};
+        state.activeProjectId = parsed.activeProjectId || null;
+      }
+      const rawP = localStorage.getItem(SK_PRICES);
+      if (rawP) state.globalPriceOverrides = JSON.parse(rawP) || {};
+    } catch (e) {
+      console.warn('Failed to load state', e);
+    }
+  }
+
+  // Write immediately (used on lifecycle events). Returns true on success.
+  function saveNow() {
+    try {
+      localStorage.setItem(SK_DATA, JSON.stringify({
+        projects: state.projects,
+        activeProjectId: state.activeProjectId,
+      }));
+      localStorage.setItem(SK_PRICES, JSON.stringify(state.globalPriceOverrides));
+      return true;
+    } catch (e) {
+      // QuotaExceededError handling gets a visible UI in Phase 3 (photos).
+      console.error('Save failed', e);
+      return false;
+    }
+  }
+
+  // Debounced autosave for high-frequency changes (typing, toggles).
+  function scheduleSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 400);
+  }
+
+  // beforeunload is unreliable on mobile — save on visibilitychange/pagehide.
+  function installLifecycleSaves() {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') saveNow();
+    });
+    window.addEventListener('pagehide', saveNow);
+  }
+
+  /* ============================================================= */
+  /* PROJECT + ROOM MODEL (CRUD)                                    */
+  /* ============================================================= */
+
+  function newProject(name, meta) {
+    const now = Date.now();
+    return {
+      id: genId('p'),
+      name: name || 'New Estimate',
+      createdAt: now,
+      updatedAt: now,
+      meta: Object.assign({ sqft: null, beds: null, baths: null, arv: null }, meta || {}),
+      rooms: [],
+      selections: {},
+      customItems: [],
+      removedItemIds: [],
+      photos: {},
+      notes: '', // free-text walkthrough notes, per project (isolated like everything else)
+    };
+  }
+
+  function touch(project) { project.updatedAt = Date.now(); }
+
+  function activeProject() {
+    return state.projects[state.activeProjectId] || null;
+  }
+
+  function makeRoomLabel(project, type) {
+    const t = ROOM_TYPES[type];
+    const count = project.rooms.filter(function (r) { return r.type === type; }).length;
+    // First single-instance room keeps the bare name; everything else is numbered.
+    if (count === 0 && !t.multi) return t.name;
+    return t.name + ' ' + (count + 1);
+  }
+
+  function addRoom(project, type) {
+    const room = { id: genId('r'), type: type, label: makeRoomLabel(project, type) };
+    project.rooms.push(room);
+    touch(project);
+    return room;
+  }
+
+  function removeRoom(project, roomId) {
+    project.rooms = project.rooms.filter(function (r) { return r.id !== roomId; });
+    // Purge every key belonging to this room — no other bookkeeping needed.
+    for (const key in project.selections) {
+      if (key.indexOf(roomId + ':') === 0) delete project.selections[key];
+    }
+    project.customItems = project.customItems.filter(function (c) { return c.roomId !== roomId; });
+    project.removedItemIds = project.removedItemIds.filter(function (k) { return k.indexOf(roomId + ':') !== 0; });
+    for (const pkey in project.photos) {
+      if (pkey.indexOf(roomId + ':') === 0) delete project.photos[pkey];
+    }
+    touch(project);
+  }
+
+  // Room instances for a new project, using beds/baths counts when provided.
+  function buildDefaultRoomList(meta) {
+    const beds = Math.max(0, parseInt(meta.beds, 10) || 0);
+    const baths = Math.max(0, parseInt(meta.baths, 10) || 0);
+    const list = ['interior', 'kitchen'];
+    for (let i = 0; i < (baths || 1); i++) list.push('bathroom');
+    for (let i = 0; i < (beds || 1); i++) list.push('bedroom');
+    list.push('living', 'systems', 'exterior');
+    return list;
+  }
+
+  function createProject(name, meta) {
+    const p = newProject(name, meta);
+    buildDefaultRoomList(p.meta).forEach(function (t) { addRoom(p, t); });
+    state.projects[p.id] = p;
+    setActiveProject(p.id);
+    return p;
+  }
+
+  function deleteProject(id) {
+    delete state.projects[id];
+    if (state.activeProjectId === id) {
+      const remaining = Object.keys(state.projects);
+      state.activeProjectId = remaining.length ? remaining[0] : null;
+      state.ui.activeRoomId = null;
+    }
+    if (!state.activeProjectId) {
+      // Never leave the app project-less — seed a fresh empty estimate.
+      createProject('New Estimate', {});
+    }
+    saveNow();
+  }
+
+  function setActiveProject(id) {
+    state.activeProjectId = id;
+    const p = activeProject();
+    state.ui.activeRoomId = p && p.rooms.length ? p.rooms[0].id : null;
+    saveNow();
+  }
+
+  /* ============================================================= */
+  /* DEMO SEED — empty demo project (full content arrives in Phase 7) */
+  /* ============================================================= */
+  function seedIfEmpty() {
+    if (Object.keys(state.projects).length > 0) return;
+    seedDemo();
+  }
+
+  /* A fully-populated demo so a reviewer's first screen shows every feature:
+     realistic meta, ~13 checked selections across 5 room instances, an
+     age-flagged furnace, a per-project price override, a custom line item,
+     and a "No action needed" group. Photos are intentionally left for the
+     reviewer to add (we never fabricate image data). */
+  function seedDemo() {
+    const meta = { sqft: 1400, beds: 3, baths: 2, arv: 220000 };
+    const p = newProject('742 Maple St — Demo', meta);
+    p.notes = 'Estate sale, vacant. Furnace looks original — verify heat exchanger. Confirm foundation crack in NE corner before finalizing offer.';
+    buildDefaultRoomList(meta).forEach(function (t) { addRoom(p, t); });
+
+    const interior = p.rooms.find(function (r) { return r.type === 'interior'; });
+    const kitchen = p.rooms.find(function (r) { return r.type === 'kitchen'; });
+    const bath1 = p.rooms.filter(function (r) { return r.type === 'bathroom'; })[0];
+    const systems = p.rooms.find(function (r) { return r.type === 'systems'; });
+    const exterior = p.rooms.find(function (r) { return r.type === 'exterior'; });
+
+    function set(room, itemId, opts) {
+      p.selections[selKey(room.id, itemId)] =
+        Object.assign({ checked: false, qty: null, unitCostOverride: null, year: null }, opts);
+    }
+    // Check an item using its sqft suggestion (keeps the "suggested" badge).
+    function checkSuggested(room, itemId) {
+      const q = suggestedQty(p, itemId);
+      set(room, itemId, { checked: true, qty: q != null ? q : 1, qtySuggested: q != null });
+    }
+
+    // Interior / General — suggestions + a flat item, Pest Control = no action.
+    checkSuggested(interior, 'ig-01');                       // Refinish hardwood ≈ 1,400 sqft
+    checkSuggested(interior, 'ig-07');                       // Interior paint ≈ 3,850
+    set(interior, 'ig-20', { checked: true, qty: 1 });      // MISC / Punch list
+    p.selections[selKey(interior.id, naItemId('ig-pest'))] =
+      { checked: true, qty: null, unitCostOverride: null, year: null }; // No action needed
+
+    // Kitchen — includes a per-project price override on granite.
+    set(kitchen, 'kt-05', { checked: true, qty: 1 });                      // Cabinets (labor & paint)
+    set(kitchen, 'kt-13', { checked: true, qty: 1 });                      // Range
+    set(kitchen, 'kt-06', { checked: true, qty: 22, unitCostOverride: 45 }); // Granite (override)
+
+    // Bathroom 1
+    set(bath1, 'ba-04', { checked: true, qty: 1 });   // Toilet
+    set(bath1, 'ba-08', { checked: true, qty: 1 });   // Reglaze tub + surround
+
+    // Systems — Electrical + Water Heater checked; Furnace year triggers an age flag.
+    set(systems, 'as-11', { checked: true, qty: 1 });               // Standard electrical
+    set(systems, 'as-08', { checked: true, qty: 1, year: 2019 });   // Water heater (still in life)
+    set(systems, 'as-01', { checked: false, year: 2005 });          // Furnace — old, flag + one-tap add
+
+    // Exterior — paint, garage door, and a custom line item.
+    set(exterior, 'ex-07', { checked: true, qty: 1200 });  // Exterior paint
+    set(exterior, 'ex-22', { checked: true, qty: 1 });     // Garage door (2 car)
+    const cid = genId('c');
+    p.customItems.push({ id: cid, roomId: exterior.id, groupId: 'ex-general', name: 'Dumpster rental', cost: 450, unit: 'flat' });
+    p.selections[selKey(exterior.id, cid)] = { checked: true, qty: 1, unitCostOverride: null, year: null, qtySuggested: false };
+
+    state.projects[p.id] = p;
+    state.activeProjectId = p.id;
+    state.ui.activeRoomId = interior.id;
+    saveNow();
+  }
+
+  /* ============================================================= */
+  /* RENDER — template-literal functions + targeted DOM writes      */
+  /* ============================================================= */
+  const el = {
+    header: document.getElementById('header'),
+    roomtabs: document.getElementById('roomtabs'),
+    list: document.getElementById('list'),
+    dealguard: document.getElementById('dealguard'),
+    footer: document.getElementById('footer'),
+    overlay: document.getElementById('overlay'),
+    sheet: document.getElementById('sheet'),
+  };
+
+  let lastHero = 0;     // last displayed hero value (for count-up animation)
+  let heroRaf = null;
+
+  // Count-up animation for the hero total (~250ms), per design system.
+  function animateHeroTo(to) {
+    const node = document.getElementById('hero-total');
+    if (!node) { lastHero = to; return; }
+    const from = lastHero;
+    if (from === to) { node.textContent = money(to); return; }
+    if (heroRaf) cancelAnimationFrame(heroRaf);
+    const start = performance.now();
+    const dur = 250;
+    function step(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      const cur = from + (to - from) * eased;
+      const live = document.getElementById('hero-total');
+      if (live) live.textContent = money(cur);
+      if (t < 1) { heroRaf = requestAnimationFrame(step); }
+      else { lastHero = to; heroRaf = null; }
+    }
+    heroRaf = requestAnimationFrame(step);
+  }
+
+  // Set the hero total instantly (used on the qty hot path — no jitter while typing).
+  function setHeroNow(value) {
+    const node = document.getElementById('hero-total');
+    if (node) node.textContent = money(value);
+    lastHero = value;
+  }
+
+  function renderHeader() {
+    const p = activeProject();
+    const total = p ? projectTotal(p) : 0;
+    const prog = p ? progress(p) : { reviewed: 0, total: 0, pct: 0 };
+    const label = prog.total > 0
+      ? prog.reviewed + '/' + prog.total + ' reviewed'
+      : 'No groups yet';
+    el.header.innerHTML = [
+      '<div class="header__row">',
+        '<button class="project-btn tap" data-action="open-projects" aria-label="Switch or manage projects">',
+          '<span class="project-btn__name">', esc(p ? p.name : 'No project'), '</span>',
+          '<span class="project-btn__chev">▾</span>',
+        '</button>',
+        '<div class="header__total">',
+          '<div class="header__total-label">Estimate</div>',
+          '<div class="header__total-value tnum" id="hero-total">', money(lastHero), '</div>',
+        '</div>',
+      '</div>',
+      '<div class="progress">',
+        '<div class="progress__track"><div class="progress__fill" style="width:', prog.pct, '%"></div></div>',
+        '<div class="progress__label">', esc(label), '</div>',
+      '</div>',
+    ].join('');
+    // Animate from the previously displayed value to the new total.
+    animateHeroTo(total);
+  }
+
+  function renderRoomTabs() {
+    const p = activeProject();
+    if (!p) { el.roomtabs.innerHTML = ''; return; }
+    const chips = p.rooms.map(function (room) {
+      const active = room.id === state.ui.activeRoomId;
+      const sub = roomTotal(p, room);
+      return [
+        '<button class="chip ', active ? 'chip--active' : '', ' tap" data-action="select-room" data-room="', room.id, '">',
+          '<span>', esc(room.label), '</span>',
+          '<span class="chip__badge tnum" data-roombadge="', room.id, '">', money(sub), '</span>',
+        '</button>',
+      ].join('');
+    }).join('');
+    el.roomtabs.innerHTML = chips +
+      '<button class="chip chip--add tap" data-action="add-room">+ Add room</button>';
+  }
+
+  function renderList() {
+    const p = activeProject();
+    if (!p) {
+      el.list.innerHTML = '<div class="empty"><div class="empty__title">No project open</div><div>Create a project to start a walkthrough.</div></div>';
+      return;
+    }
+    if (!p.rooms.length) {
+      el.list.innerHTML = '<div class="empty"><div class="empty__title">No rooms yet</div><div>Add your first room to start the walkthrough.</div></div>';
+      return;
+    }
+    const room = p.rooms.find(function (r) { return r.id === state.ui.activeRoomId; }) || p.rooms[0];
+    state.ui.activeRoomId = room.id;
+    const typeName = ROOM_TYPES[room.type] ? ROOM_TYPES[room.type].name : room.type;
+    const groups = groupsForRoom(room);
+    const groupsHtml = groups.map(function (group, i) { return renderGroup(p, room, group, i); }).join('');
+    el.list.innerHTML = [
+      '<div class="room-head">',
+        '<div>',
+          '<div class="room-head__title">', esc(room.label), '</div>',
+          '<div class="room-head__sub">', esc(typeName), ' · <span class="tnum" data-roombadge="', room.id, '">', money(roomTotal(p, room)), '</span></div>',
+        '</div>',
+        '<div class="room-actions">',
+          '<button class="icon-btn tap" data-action="rename-room" data-room="', room.id, '">Rename</button>',
+          '<button class="icon-btn icon-btn--danger tap" data-action="remove-room" data-room="', room.id, '">Remove</button>',
+        '</div>',
+      '</div>',
+      groupsHtml || '<div class="placeholder"><div class="placeholder__hint">This room type has no groups configured.</div></div>',
+    ].join('');
+  }
+
+  // Default collapse: first group of a room is open, the rest collapsed.
+  function isGroupExpanded(roomId, groupId, index) {
+    const key = selKey(roomId, groupId);
+    const v = state.ui.expandedGroups[key];
+    return v == null ? index === 0 : v;
+  }
+
+  function renderGroup(project, room, group, index) {
+    const reviewed = isGroupReviewed(project, room, group);
+    const open = isGroupExpanded(room.id, group.id, index);
+    const gt = groupTotal(project, room, group);
+    const naOn = (function () { const s = getSel(project, room.id, naItemId(group.id)); return !!(s && s.checked); })();
+
+    const itemIds = groupItemIds(project, room.id, group);
+    const rowsHtml = itemIds.map(function (id) { return renderItem(project, room, group, id); }).join('');
+
+    const hiddenCount = group.items.filter(function (id) { return isRemoved(project, room.id, id); }).length;
+    const hiddenHtml = hiddenCount
+      ? '<button class="grow-link tap" data-action="restore-hidden" data-room="' + room.id + '" data-group="' + group.id + '">' +
+          hiddenCount + ' hidden — restore</button>'
+      : '';
+
+    return [
+      '<section class="group ', open ? 'group--open' : '', '">',
+        '<button class="group__head tap" data-action="toggle-group" data-room="', room.id, '" data-group="', group.id, '">',
+          '<span class="group__chev" aria-hidden="true">▸</span>',
+          '<span class="group__title">', esc(room.label), ': ', esc(group.name), '</span>',
+          '<span class="group__check ', reviewed ? 'group__check--on' : '', '" aria-hidden="true">', (reviewed ? '✓' : ''), '</span>',
+          '<span class="group__total tnum" data-grouptotal="', room.id, ':', group.id, '">', money(gt), '</span>',
+        '</button>',
+        '<div class="group__body"><div class="group__inner">',
+          '<button class="noaction ', naOn ? 'noaction--on' : '', ' tap" data-action="toggle-noaction" data-room="', room.id, '" data-group="', group.id, '">',
+            '<span class="noaction__mark">', (naOn ? '✓' : ''), '</span> No action needed',
+          '</button>',
+          rowsHtml,
+          '<div class="group__foot">',
+            '<button class="grow-link grow-link--accent tap" data-action="add-custom" data-room="', room.id, '" data-group="', group.id, '">+ Add custom item</button>',
+            hiddenHtml,
+          '</div>',
+        '</div></div>',
+      '</section>',
+    ].join('');
+  }
+
+  function renderItem(project, room, group, itemId) {
+    const sel = getSel(project, room.id, itemId);
+    const checked = !!(sel && sel.checked);
+    const meta = itemMeta(project, room.id, itemId);
+    const cost = effectiveCost(project, room.id, itemId);
+    const overridden = !!(sel && sel.unitCostOverride != null);
+    const key = selKey(room.id, itemId);
+    const qtyVal = sel && sel.qty != null ? sel.qty : '';
+    const sug = suggestedQty(project, itemId);
+    const showSuggestedBadge = checked && sel && sel.qtySuggested && sug != null;
+
+    const rightHtml = checked
+      ? [
+          '<div class="qtyblock">',
+            (showSuggestedBadge ? '<span class="tag tag--suggested">suggested</span>' : ''),
+            '<input class="qty tnum" type="number" inputmode="decimal" step="any" min="0" ',
+              'value="', esc(qtyVal), '" data-room="', room.id, '" data-item="', itemId, '" aria-label="Quantity" />',
+            '<span class="qtyblock__eq">=</span>',
+            '<span class="linetotal tnum" data-linetotal="', key, '">', money(lineTotal(project, room.id, itemId)), '</span>',
+          '</div>',
+        ].join('')
+      : (sug != null
+          ? '<span class="item__add">Tap to add · suggests <b>' + sug.toLocaleString('en-US') + '</b> ' + esc(meta.unit || '') + '</span>'
+          : '<span class="item__add">Tap to add</span>');
+
+    return [
+      '<div class="item ', checked ? 'item--checked' : '', '">',
+        '<button class="chk tap" data-action="toggle-item" data-room="', room.id, '" data-item="', itemId, '" data-group="', group.id, '" aria-pressed="', checked, '" aria-label="Toggle ', esc(meta.name), '">',
+          '<span class="chk__box">', (checked ? '✓' : ''), '</span>',
+        '</button>',
+        '<div class="item__main">',
+          '<div class="item__top">',
+            '<span class="item__name">', esc(meta.name), meta.isCustom ? ' <span class="tag tag--custom">custom</span>' : '', '</span>',
+            (meta.isCustom
+              ? '<button class="item__x tap" data-action="delete-custom" data-room="' + room.id + '" data-item="' + itemId + '" aria-label="Delete custom item">×</button>'
+              : '<button class="item__x tap" data-action="hide-item" data-room="' + room.id + '" data-item="' + itemId + '" aria-label="Hide item">×</button>'),
+          '</div>',
+          '<div class="item__ctl">',
+            '<button class="unit tap" data-action="edit-cost" data-room="', room.id, '" data-item="', itemId, '">',
+              '<span class="tnum">', unitMoney(cost), '</span><span class="unit__u">/', esc(meta.unit || ''), '</span>',
+              overridden ? ' <span class="tag tag--override">override</span>' : '',
+            '</button>',
+            rightHtml,
+          '</div>',
+          isEquipment(itemId) ? renderEquipRow(project, room, itemId) : '',
+        '</div>',
+      '</div>',
+    ].join('');
+  }
+
+  // Equipment rows: install-year field, age flag, and photos.
+  function renderEquipRow(project, room, itemId) {
+    const n = photoCount(project, selKey(room.id, itemId));
+    const sel = getSel(project, room.id, itemId);
+    const year = sel && sel.year != null ? sel.year : '';
+    const flag = ageFlag(project, room.id, itemId);
+    const checked = !!(sel && sel.checked);
+
+    const flagHtml = flag
+      ? [
+          '<div class="agewarn">',
+            '<span class="agewarn__text">≈', flag.age, ' yrs old — near end of life (', flag.lifespan, 'y typical)</span>',
+            (checked ? '' : '<button class="agewarn__add tap" data-action="age-add" data-room="' + room.id + '" data-item="' + itemId + '">Add to estimate (qty 1)</button>'),
+          '</div>',
+        ].join('')
+      : '';
+
+    return [
+      '<div class="item__equip">',
+        '<div class="yearfield">',
+          '<label class="yearfield__label">Installed</label>',
+          '<input class="year-input tnum" type="number" inputmode="numeric" min="1900" max="', CURRENT_YEAR, '" ',
+            'value="', esc(year), '" placeholder="year" data-room="', room.id, '" data-item="', itemId, '" aria-label="Install year" />',
+        '</div>',
+        '<button class="pill tap" data-action="item-photos" data-room="', room.id, '" data-item="', itemId, '">',
+          'Photos', (n ? ' (' + n + ')' : ''),
+        '</button>',
+      '</div>',
+      flagHtml,
+    ].join('');
+  }
+
+  function renderFooter() {
+    const p = activeProject();
+    const n = p ? photoCount(p, 'project') : 0;
+    el.footer.innerHTML = [
+      '<button class="footer__btn tap" data-action="open-photos">Photos', (n ? ' (' + n + ')' : ''), '</button>',
+      '<button class="footer__btn tap" data-action="open-settings">Settings</button>',
+      '<button class="footer__btn footer__btn--primary tap" data-action="export">Export</button>',
+    ].join('');
+  }
+
+  // Full render — used on structural changes (nav, add/remove, project switch).
+  // opts.preserveScroll keeps the window scroll position (e.g. toggling an item
+  // deep in the list shouldn't jump the page to the top).
+  function render(opts) {
+    const y = window.scrollY;
+    renderHeader();
+    renderRoomTabs();
+    renderList();
+    renderDealGuard();
+    renderFooter();
+    if (opts && opts.preserveScroll) window.scrollTo(0, y);
+  }
+
+  // ---- Targeted DOM writes (HOT PATH) — never re-render while typing qty ----
+  function setNodeText(selector, text) {
+    const node = document.querySelector(selector);
+    if (node) node.textContent = text;
+  }
+
+  // After a qty change: update the line total, every group total in this room
+  // that contains the item, the room chip badge, and the hero total — all via
+  // targeted writes so the focused input never blurs.
+  function refreshTotalsAfterQty(project, room, itemId) {
+    const lt = money(lineTotal(project, room.id, itemId));
+    // An item can render in two groups (e.g. a door in Doors + Closet) — update all.
+    document.querySelectorAll('[data-linetotal="' + selKey(room.id, itemId) + '"]').forEach(function (n) { n.textContent = lt; });
+    groupsForRoom(room).forEach(function (g) {
+      setNodeText('[data-grouptotal="' + room.id + ':' + g.id + '"]', money(groupTotal(project, room, g)));
+    });
+    // A room may appear both in the chip bar and the room-head sub — update both.
+    document.querySelectorAll('[data-roombadge="' + room.id + '"]').forEach(function (node) {
+      node.textContent = money(roomTotal(project, room));
+    });
+    setHeroNow(projectTotal(project)); // instant (no count-up while typing)
+    renderDealGuard();                 // keep max offer / margin in sync
+  }
+
+  /* ============================================================= */
+  /* MODALS / SHEETS (reusable)                                     */
+  /* ============================================================= */
+  // Teardown for the currently-open sheet's local listeners. Any close path
+  // (button finish() or backdrop -> closeSheet) runs this so listeners can't leak.
+  let sheetCleanup = null;
+  function openSheet(html) {
+    if (sheetCleanup) { sheetCleanup(); sheetCleanup = null; }
+    el.sheet.innerHTML = html;
+    el.overlay.classList.add('overlay--open');
+  }
+  function closeSheet() {
+    if (sheetCleanup) { sheetCleanup(); sheetCleanup = null; }
+    el.overlay.classList.remove('overlay--open');
+    el.sheet.innerHTML = '';
+  }
+
+  // Promise-based text prompt (clean replacement for window.prompt on mobile).
+  function promptText(opts) {
+    return new Promise(function (resolve) {
+      openSheet([
+        '<h2 class="sheet__title">', esc(opts.title), '</h2>',
+        '<label class="sheet__label">', esc(opts.label || 'Name'), '</label>',
+        '<input class="field" id="prompt-input" type="text" value="', esc(opts.value || ''), '" ',
+          'placeholder="', esc(opts.placeholder || ''), '" autocomplete="off" />',
+        '<div class="sheet__actions">',
+          '<button class="btn btn--ghost tap" data-action="prompt-cancel">Cancel</button>',
+          '<button class="btn btn--primary tap" data-action="prompt-ok">', esc(opts.ok || 'Save'), '</button>',
+        '</div>',
+      ].join(''));
+      const input = document.getElementById('prompt-input');
+      input.focus();
+      // Move cursor to end for rename UX.
+      const val = input.value; input.value = ''; input.value = val;
+
+      function finish(result) {
+        el.sheet.removeEventListener('click', onClick);
+        input.removeEventListener('keydown', onKey);
+        closeSheet();
+        resolve(result);
+      }
+      function onClick(e) {
+        const act = e.target.closest('[data-action]');
+        if (!act) return;
+        if (act.dataset.action === 'prompt-ok') finish(input.value.trim());
+        if (act.dataset.action === 'prompt-cancel') finish(null);
+      }
+      function onKey(e) { if (e.key === 'Enter') finish(input.value.trim()); }
+      el.sheet.addEventListener('click', onClick);
+      input.addEventListener('keydown', onKey);
+      sheetCleanup = function () {
+        el.sheet.removeEventListener('click', onClick);
+        input.removeEventListener('keydown', onKey);
+      };
+    });
+  }
+
+  function confirmDialog(opts) {
+    return new Promise(function (resolve) {
+      openSheet([
+        '<h2 class="sheet__title">', esc(opts.title), '</h2>',
+        '<p style="margin:0 0 16px;color:var(--ink-soft)">', esc(opts.message || ''), '</p>',
+        '<div class="sheet__actions">',
+          '<button class="btn btn--ghost tap" data-action="confirm-cancel">', esc(opts.cancel || 'Cancel'), '</button>',
+          '<button class="btn ', (opts.danger ? 'btn--danger' : 'btn--primary'), ' tap" data-action="confirm-ok">', esc(opts.ok || 'OK'), '</button>',
+        '</div>',
+      ].join(''));
+      function finish(result) { el.sheet.removeEventListener('click', onClick); closeSheet(); resolve(result); }
+      function onClick(e) {
+        const act = e.target.closest('[data-action]');
+        if (!act) return;
+        if (act.dataset.action === 'confirm-ok') finish(true);
+        if (act.dataset.action === 'confirm-cancel') finish(false);
+      }
+      el.sheet.addEventListener('click', onClick);
+      sheetCleanup = function () { el.sheet.removeEventListener('click', onClick); };
+    });
+  }
+
+  function openProjectsSheet() {
+    const ids = Object.keys(state.projects).sort(function (a, b) {
+      return state.projects[b].updatedAt - state.projects[a].updatedAt;
+    });
+    const rows = ids.map(function (id) {
+      const p = state.projects[id];
+      const active = id === state.activeProjectId;
+      const roomCount = p.rooms.length;
+      return [
+        '<div class="proj-row ', active ? 'proj-row--active' : '', '">',
+          '<button class="proj-row__main tap" data-action="switch-project" data-id="', id, '">',
+            '<div class="proj-row__name">', esc(p.name), '</div>',
+            '<div class="proj-row__meta">', roomCount, ' room', (roomCount === 1 ? '' : 's'),
+              ' · <span class="tnum">', money(projectTotal(p)), '</span></div>',
+          '</button>',
+          '<button class="mini-btn tap" data-action="edit-notes" data-id="', id, '">Notes</button>',
+          '<button class="mini-btn tap" data-action="rename-project" data-id="', id, '">Rename</button>',
+          '<button class="mini-btn mini-btn--danger tap" data-action="delete-project" data-id="', id, '">Delete</button>',
+        '</div>',
+      ].join('');
+    }).join('');
+    openSheet([
+      '<h2 class="sheet__title">Projects</h2>',
+      '<div class="proj-list">', rows, '</div>',
+      '<button class="btn btn--primary tap" data-action="new-project" style="width:100%">+ New estimate</button>',
+      '<hr class="divider" />',
+      '<p class="hint">Each project keeps its own rooms, selections, and photos. The app reopens to your last active project.</p>',
+    ].join(''));
+  }
+
+  // New-project wizard — captures meta up front to power quantity suggestions.
+  function openNewProjectSheet() {
+    openSheet([
+      '<h2 class="sheet__title">New estimate</h2>',
+      '<label class="sheet__label">Property name / address</label>',
+      '<input class="field" id="np-name" type="text" placeholder="e.g. 118 Oak Ave" autocomplete="off" />',
+      '<label class="sheet__label">Square footage (powers quantity suggestions)</label>',
+      '<input class="field tnum" id="np-sqft" type="number" inputmode="numeric" min="0" placeholder="e.g. 1400" />',
+      '<div style="display:flex;gap:12px">',
+        '<div style="flex:1"><label class="sheet__label">Beds</label><input class="field tnum" id="np-beds" type="number" inputmode="numeric" min="0" placeholder="3" /></div>',
+        '<div style="flex:1"><label class="sheet__label">Baths</label><input class="field tnum" id="np-baths" type="number" inputmode="numeric" min="0" placeholder="2" /></div>',
+      '</div>',
+      '<label class="sheet__label">ARV — after-repair value (optional)</label>',
+      '<input class="field tnum" id="np-arv" type="number" inputmode="numeric" min="0" placeholder="e.g. 220000" />',
+      '<div class="sheet__actions">',
+        '<button class="btn btn--ghost tap" data-action="np-cancel">Cancel</button>',
+        '<button class="btn btn--primary tap" data-action="np-create">Create</button>',
+      '</div>',
+      '<p class="hint" style="margin-top:8px">Beds &amp; baths pre-create that many room instances. Everything is editable later.</p>',
+    ].join(''));
+    document.getElementById('np-name').focus();
+    function num(id) { const v = document.getElementById(id).value.trim(); return v === '' ? null : Math.max(0, parseFloat(v) || 0); }
+    function finish() { el.sheet.removeEventListener('click', onClick); closeSheet(); }
+    function onClick(e) {
+      const act = e.target.closest('[data-action]');
+      if (!act) return;
+      if (act.dataset.action === 'np-cancel') { finish(); return; }
+      if (act.dataset.action === 'np-create') {
+        const name = document.getElementById('np-name').value.trim();
+        if (!name) { document.getElementById('np-name').focus(); return; }
+        const meta = { sqft: num('np-sqft'), beds: num('np-beds'), baths: num('np-baths'), arv: num('np-arv') };
+        createProject(name, meta);
+        finish();
+        render();
+      }
+    }
+    el.sheet.addEventListener('click', onClick);
+    sheetCleanup = function () { el.sheet.removeEventListener('click', onClick); };
+  }
+
+  function openNotesSheet(id) {
+    const proj = state.projects[id];
+    openSheet([
+      '<h2 class="sheet__title">Notes</h2>',
+      '<label class="sheet__label">Walkthrough notes for ', esc(proj.name), '</label>',
+      '<textarea class="field" id="notes-input" rows="6" placeholder="e.g. Seller mentioned roof leak over garage; verify foundation crack in NE corner." style="resize:vertical">', esc(proj.notes || ''), '</textarea>',
+      '<div class="sheet__actions">',
+        '<button class="btn btn--ghost tap" data-action="notes-cancel">Cancel</button>',
+        '<button class="btn btn--primary tap" data-action="notes-save">Save</button>',
+      '</div>',
+    ].join(''));
+    document.getElementById('notes-input').focus();
+    function finish() { el.sheet.removeEventListener('click', onClick); }
+    function onClick(e) {
+      const act = e.target.closest('[data-action]');
+      if (!act) return;
+      if (act.dataset.action === 'notes-cancel') { finish(); openProjectsSheet(); return; }
+      if (act.dataset.action === 'notes-save') {
+        proj.notes = document.getElementById('notes-input').value;
+        touch(proj); saveNow(); finish(); openProjectsSheet();
+        toast('Notes saved.');
+      }
+    }
+    el.sheet.addEventListener('click', onClick);
+    sheetCleanup = function () { el.sheet.removeEventListener('click', onClick); };
+  }
+
+  function openRoomTypeSheet() {
+    const grid = ROOM_TYPE_ORDER.map(function (type) {
+      return '<button class="type-btn tap" data-action="add-room-type" data-type="' + type + '">' +
+        esc(ROOM_TYPES[type].name) + '</button>';
+    }).join('');
+    openSheet([
+      '<h2 class="sheet__title">Add a room</h2>',
+      '<div class="type-grid">', grid, '</div>',
+      '<button class="btn btn--ghost tap" data-action="sheet-close" style="width:100%">Cancel</button>',
+    ].join(''));
+  }
+
+  /* ============================================================= */
+  /* EVENTS — single delegated listener on the app root             */
+  /* ============================================================= */
+  async function handleAction(action, target) {
+    const p = activeProject();
+
+    switch (action) {
+      /* ----- Projects ----- */
+      case 'open-projects':
+        openProjectsSheet();
+        break;
+      case 'new-project':
+        openNewProjectSheet();
+        break;
+      case 'switch-project':
+        setActiveProject(target.dataset.id);
+        closeSheet();
+        render();
+        break;
+      case 'rename-project': {
+        const id = target.dataset.id;
+        const proj = state.projects[id];
+        const name = await promptText({ title: 'Rename project', label: 'Project name', value: proj.name, ok: 'Save' });
+        if (name) { proj.name = name; touch(proj); saveNow(); render(); openProjectsSheet(); }
+        break;
+      }
+      case 'edit-notes':
+        openNotesSheet(target.dataset.id);
+        break;
+      case 'delete-project': {
+        const id = target.dataset.id;
+        const proj = state.projects[id];
+        const ok = await confirmDialog({ title: 'Delete project?', message: 'Delete “' + proj.name + '” and all its data? This cannot be undone.', ok: 'Delete', danger: true });
+        if (ok) { deleteProject(id); render(); openProjectsSheet(); }
+        break;
+      }
+
+      /* ----- Rooms ----- */
+      case 'select-room':
+        state.ui.activeRoomId = target.dataset.room;
+        render();
+        break;
+      case 'add-room':
+        openRoomTypeSheet();
+        break;
+      case 'add-room-type': {
+        const room = addRoom(p, target.dataset.type);
+        state.ui.activeRoomId = room.id;
+        saveNow();
+        closeSheet();
+        render();
+        break;
+      }
+      case 'rename-room': {
+        const room = p.rooms.find(function (r) { return r.id === target.dataset.room; });
+        const label = await promptText({ title: 'Rename room', label: 'Room name', value: room.label, ok: 'Save' });
+        if (label) { room.label = label; touch(p); saveNow(); render(); }
+        break;
+      }
+      case 'remove-room': {
+        const room = p.rooms.find(function (r) { return r.id === target.dataset.room; });
+        const ok = await confirmDialog({ title: 'Remove room?', message: 'Remove “' + room.label + '” and its selections?', ok: 'Remove', danger: true });
+        if (ok) {
+          removeRoom(p, room.id);
+          if (state.ui.activeRoomId === room.id) state.ui.activeRoomId = p.rooms.length ? p.rooms[0].id : null;
+          saveNow();
+          render();
+        }
+        break;
+      }
+
+      /* ----- Walkthrough: groups & items ----- */
+      case 'toggle-group': {
+        const key = selKey(target.dataset.room, target.dataset.group);
+        const idx = groupsForRoom(p.rooms.find(function (r) { return r.id === target.dataset.room; }))
+          .findIndex(function (g) { return g.id === target.dataset.group; });
+        const currentlyOpen = isGroupExpanded(target.dataset.room, target.dataset.group, idx);
+        state.ui.expandedGroups[key] = !currentlyOpen;
+        render({ preserveScroll: true });
+        break;
+      }
+      case 'toggle-item': {
+        const roomId = target.dataset.room, itemId = target.dataset.item, groupId = target.dataset.group;
+        const sel = ensureSel(p, roomId, itemId);
+        sel.checked = !sel.checked;
+        if (sel.checked) {
+          if (sel.qty == null) {
+            // Pre-fill from the sqft suggestion when available; else default 1.
+            const sug = suggestedQty(p, itemId);
+            sel.qty = sug != null ? sug : 1;
+            sel.qtySuggested = sug != null;
+          }
+          // Checking a real item clears this group's "No action needed" flag.
+          const na = getSel(p, roomId, naItemId(groupId));
+          if (na) na.checked = false;
+        }
+        touch(p);
+        scheduleSave();
+        render({ preserveScroll: true });
+        if (sel.checked) {
+          const q = document.querySelector('.qty[data-room="' + roomId + '"][data-item="' + itemId + '"]');
+          if (q) q.focus();
+        }
+        break;
+      }
+      case 'toggle-noaction': {
+        const roomId = target.dataset.room, groupId = target.dataset.group;
+        const room = p.rooms.find(function (r) { return r.id === roomId; });
+        const group = groupsForRoom(room).find(function (g) { return g.id === groupId; });
+        const na = ensureSel(p, roomId, naItemId(groupId));
+        na.checked = !na.checked;
+        if (na.checked) {
+          // Marking a group "no action" clears its items so its subtotal is truly $0.
+          groupItemIds(p, roomId, group).forEach(function (id) {
+            const s = getSel(p, roomId, id);
+            if (s) s.checked = false;
+          });
+        }
+        touch(p);
+        scheduleSave();
+        render({ preserveScroll: true });
+        break;
+      }
+      case 'age-add': {
+        const roomId = target.dataset.room, itemId = target.dataset.item;
+        const sel = ensureSel(p, roomId, itemId);
+        sel.checked = true;
+        if (sel.qty == null) sel.qty = 1;
+        sel.qtySuggested = false;
+        // Clear "No action needed" on the item's group so it counts as reviewed.
+        const room = p.rooms.find(function (r) { return r.id === roomId; });
+        const grp = groupsForRoom(room).find(function (g) { return g.items.indexOf(itemId) >= 0; });
+        if (grp) { const na = getSel(p, roomId, naItemId(grp.id)); if (na) na.checked = false; }
+        touch(p); scheduleSave(); render({ preserveScroll: true });
+        break;
+      }
+      case 'open-dealguard':
+        openDealGuardSheet();
+        break;
+      case 'edit-cost':
+        openCostSheet(p, target.dataset.room, target.dataset.item);
+        break;
+      case 'add-custom':
+        openCustomSheet(p, target.dataset.room, target.dataset.group);
+        break;
+      case 'delete-custom': {
+        const roomId = target.dataset.room, itemId = target.dataset.item;
+        const custom = findCustomItem(p, roomId, itemId);
+        const ok = await confirmDialog({ title: 'Delete item?', message: 'Delete “' + (custom ? custom.name : 'this item') + '”?', ok: 'Delete', danger: true });
+        if (ok) {
+          p.customItems = p.customItems.filter(function (c) { return !(c.roomId === roomId && c.id === itemId); });
+          delete p.selections[selKey(roomId, itemId)];
+          delete p.photos[selKey(roomId, itemId)];
+          touch(p);
+          scheduleSave();
+          render({ preserveScroll: true });
+        }
+        break;
+      }
+      case 'hide-item': {
+        const roomId = target.dataset.room, itemId = target.dataset.item;
+        const k = selKey(roomId, itemId);
+        if (p.removedItemIds.indexOf(k) < 0) p.removedItemIds.push(k);
+        delete p.selections[k]; // hidden items don't linger in totals
+        touch(p);
+        scheduleSave();
+        render({ preserveScroll: true });
+        break;
+      }
+      case 'restore-hidden': {
+        const roomId = target.dataset.room, groupId = target.dataset.group;
+        const room = p.rooms.find(function (r) { return r.id === roomId; });
+        const group = groupsForRoom(room).find(function (g) { return g.id === groupId; });
+        const groupKeys = group.items.map(function (id) { return selKey(roomId, id); });
+        p.removedItemIds = p.removedItemIds.filter(function (k) { return groupKeys.indexOf(k) < 0; });
+        touch(p);
+        scheduleSave();
+        render({ preserveScroll: true });
+        break;
+      }
+
+      /* ----- Sheet / overlay ----- */
+      case 'sheet-close':
+        closeSheet();
+        break;
+
+      /* ----- Photos ----- */
+      case 'open-photos':
+        openPhotosSheet('project');
+        break;
+      case 'item-photos':
+        openPhotosSheet(selKey(target.dataset.room, target.dataset.item));
+        break;
+      case 'add-photo': {
+        const key = target.dataset.key;
+        addPhotoFlow(p, key, function () { openPhotosSheet(key); });
+        break;
+      }
+      case 'del-photo': {
+        const key = target.dataset.key;
+        const idx = parseInt(target.dataset.idx, 10);
+        if (p.photos[key]) {
+          p.photos[key].splice(idx, 1);
+          if (!p.photos[key].length) delete p.photos[key];
+          touch(p);
+          saveNow();
+        }
+        openPhotosSheet(key);
+        break;
+      }
+
+      /* ----- Settings ----- */
+      case 'open-settings':
+        openSettingsSheet();
+        break;
+      case 'settings-done':
+        closeSheet();
+        render({ preserveScroll: true });
+        break;
+      case 'reset-prices': {
+        const ok = await confirmDialog({ title: 'Reset prices?', message: 'Clear all global price edits and return to catalog defaults?', ok: 'Reset', danger: true });
+        if (ok) { state.globalPriceOverrides = {}; saveNow(); openSettingsSheet(); toast('Prices reset to catalog defaults.'); }
+        break;
+      }
+      case 'reset-all': {
+        const ok = await confirmDialog({ title: 'Reset all data?', message: 'Delete every project, photo, and price edit. This cannot be undone.', ok: 'Delete everything', danger: true });
+        if (ok) {
+          localStorage.removeItem(SK_DATA);
+          localStorage.removeItem(SK_PRICES);
+          state.projects = {};
+          state.activeProjectId = null;
+          state.globalPriceOverrides = {};
+          state.ui.expandedGroups = {};
+          lastHero = 0;
+          seedIfEmpty();
+          const np = activeProject();
+          state.ui.activeRoomId = np && np.rooms.length ? np.rooms[0].id : null;
+          closeSheet();
+          render();
+          toast('All data reset.');
+        }
+        break;
+      }
+      case 'export': {
+        // Pre-export big-ticket guard: warn if major systems are unreviewed.
+        const unrev = unreviewedCritical(p);
+        if (unrev.length) {
+          const go = await confirmDialog({
+            title: 'Big-ticket items not reviewed',
+            message: 'These major systems are still unreviewed: ' + unrev.join(', ') + '. They usually drive the largest costs. Export anyway?',
+            ok: 'Export anyway',
+            cancel: 'Go back',
+            danger: true,
+          });
+          if (!go) break;
+        }
+        await exportProject(p);
+        break;
+      }
+    }
+  }
+
+  function installEventDelegation() {
+    document.body.addEventListener('click', function (e) {
+      const actEl = e.target.closest('[data-action]');
+      if (!actEl) return;
+      const action = actEl.dataset.action;
+      // Backdrop click closes the sheet (but clicks inside the sheet don't).
+      if (action === 'overlay-backdrop') {
+        if (e.target === el.overlay) closeSheet();
+        return;
+      }
+      // These are handled by their own sheet-local listeners.
+      if (/^(prompt|confirm|cost|ci|np|notes)-/.test(action)) return;
+      handleAction(action, actEl);
+    });
+
+    // HOT PATH: qty typing updates totals via targeted DOM writes only.
+    document.body.addEventListener('input', function (e) {
+      const t = e.target;
+      if (!t.classList) return;
+
+      if (t.classList.contains('qty')) {
+        const p = activeProject();
+        if (!p) return;
+        const roomId = t.dataset.room, itemId = t.dataset.item;
+        const room = p.rooms.find(function (r) { return r.id === roomId; });
+        const sel = ensureSel(p, roomId, itemId);
+        const raw = t.value.trim();
+        sel.qty = raw === '' ? null : Math.max(0, parseFloat(raw) || 0);
+        sel.qtySuggested = false; // user has taken ownership of this quantity
+        touch(p);
+        refreshTotalsAfterQty(p, room, itemId);
+        scheduleSave();
+        return;
+      }
+
+      // Global default price edit (Settings) — applies live across all projects.
+      if (t.classList.contains('price-input')) {
+        const id = t.dataset.priceid;
+        const raw = t.value.trim();
+        if (raw === '') { delete state.globalPriceOverrides[id]; }
+        else { state.globalPriceOverrides[id] = Math.max(0, parseFloat(raw) || 0); }
+        scheduleSave();
+        return;
+      }
+
+      // Deal Guard ARV — live-update the panel + bar via targeted writes.
+      if (t.id === 'arv-input') {
+        const p = activeProject();
+        if (!p) return;
+        const raw = t.value.trim();
+        p.meta.arv = raw === '' ? null : Math.max(0, parseFloat(raw) || 0);
+        touch(p);
+        refreshDealGuardDom();
+        scheduleSave();
+        return;
+      }
+    });
+
+    document.body.addEventListener('change', function (e) {
+      const t = e.target;
+
+      // CSV price re-upload (Settings). File inputs fire 'change', not 'input'.
+      if (t.id === 'csv-input') {
+        const file = t.files && t.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function () { applyCsvPrices(String(reader.result || '')); };
+        reader.onerror = function () { toast('Could not read that file.', 'error'); };
+        reader.readAsText(file);
+        return;
+      }
+
+      // Equipment install year — handled on change (blur) so the age flag
+      // appears/disappears without blurring the field mid-typing.
+      if (t.classList && t.classList.contains('year-input')) {
+        const p = activeProject();
+        if (!p) return;
+        const roomId = t.dataset.room, itemId = t.dataset.item;
+        const sel = ensureSel(p, roomId, itemId);
+        const raw = t.value.trim();
+        const yr = parseInt(raw, 10);
+        sel.year = (raw === '' || isNaN(yr)) ? null : yr;
+        touch(p);
+        saveNow();
+        render({ preserveScroll: true });
+        return;
+      }
+    });
+  }
+
+  /* ----- Price override + custom item sheets ----- */
+  function openCostSheet(project, roomId, itemId) {
+    const meta = itemMeta(project, roomId, itemId);
+    const custom = findCustomItem(project, roomId, itemId);
+    const base = custom ? custom.cost : (ITEM_BY_ID[itemId] ? ITEM_BY_ID[itemId].cost : 0);
+    const globalOv = state.globalPriceOverrides[itemId];
+    const defaultCost = globalOv != null ? globalOv : base;
+    const current = effectiveCost(project, roomId, itemId);
+    openSheet([
+      '<h2 class="sheet__title">', esc(meta.name), '</h2>',
+      '<label class="sheet__label">Unit cost (this project only) · per ', esc(meta.unit || 'unit'), '</label>',
+      '<input class="field tnum" id="cost-input" type="number" inputmode="decimal" step="any" min="0" value="', esc(current), '" />',
+      '<p class="hint" style="margin:-8px 0 16px">Catalog default: ', unitMoney(defaultCost), '</p>',
+      '<div class="sheet__actions">',
+        '<button class="btn btn--ghost tap" data-action="cost-reset">Reset to default</button>',
+        '<button class="btn btn--primary tap" data-action="cost-save">Save</button>',
+      '</div>',
+    ].join(''));
+    const input = document.getElementById('cost-input');
+    input.focus();
+    function finish() { el.sheet.removeEventListener('click', onClick); closeSheet(); }
+    function onClick(e) {
+      const act = e.target.closest('[data-action]');
+      if (!act) return;
+      if (act.dataset.action === 'cost-save') {
+        const val = parseFloat(input.value);
+        const v = Math.max(0, val);
+        const sel = ensureSel(project, roomId, itemId);
+        // Only record an override when it actually differs from the effective default.
+        sel.unitCostOverride = (isNaN(val) || v === defaultCost) ? null : v;
+        touch(project); saveNow(); finish(); render({ preserveScroll: true });
+      } else if (act.dataset.action === 'cost-reset') {
+        const sel = getSel(project, roomId, itemId);
+        if (sel) sel.unitCostOverride = null;
+        touch(project); saveNow(); finish(); render({ preserveScroll: true });
+      }
+    }
+    el.sheet.addEventListener('click', onClick);
+    sheetCleanup = function () { el.sheet.removeEventListener('click', onClick); };
+  }
+
+  function openCustomSheet(project, roomId, groupId) {
+    openSheet([
+      '<h2 class="sheet__title">Add custom item</h2>',
+      '<label class="sheet__label">Item name</label>',
+      '<input class="field" id="ci-name" type="text" placeholder="e.g. Chimney rebuild" autocomplete="off" />',
+      '<label class="sheet__label">Unit cost</label>',
+      '<input class="field tnum" id="ci-cost" type="number" inputmode="decimal" step="any" min="0" placeholder="0" />',
+      '<label class="sheet__label">Unit</label>',
+      '<input class="field" id="ci-unit" type="text" placeholder="e.g. ea. / sqft / flat" autocomplete="off" />',
+      '<div class="sheet__actions">',
+        '<button class="btn btn--ghost tap" data-action="ci-cancel">Cancel</button>',
+        '<button class="btn btn--primary tap" data-action="ci-save">Add item</button>',
+      '</div>',
+    ].join(''));
+    document.getElementById('ci-name').focus();
+    function finish() { el.sheet.removeEventListener('click', onClick); closeSheet(); }
+    function onClick(e) {
+      const act = e.target.closest('[data-action]');
+      if (!act) return;
+      if (act.dataset.action === 'ci-cancel') { finish(); return; }
+      if (act.dataset.action === 'ci-save') {
+        const name = document.getElementById('ci-name').value.trim();
+        const cost = parseFloat(document.getElementById('ci-cost').value) || 0;
+        const unit = document.getElementById('ci-unit').value.trim() || 'ea.';
+        if (!name) { document.getElementById('ci-name').focus(); return; }
+        const id = genId('c');
+        project.customItems.push({ id: id, roomId: roomId, groupId: groupId, name: name, cost: cost, unit: unit });
+        // The user explicitly added it, so start it checked at qty 1.
+        project.selections[selKey(roomId, id)] = { checked: true, qty: 1, unitCostOverride: null, year: null };
+        touch(project); saveNow(); finish(); render({ preserveScroll: true });
+      }
+    }
+    el.sheet.addEventListener('click', onClick);
+    sheetCleanup = function () { el.sheet.removeEventListener('click', onClick); };
+  }
+
+  /* ============================================================= */
+  /* PHOTOS + SETTINGS                                              */
+  /* ============================================================= */
+
+  // Transient, visible status message — never lose data silently.
+  function toast(msg, type) {
+    const t = document.createElement('div');
+    t.className = 'toast' + (type === 'error' ? ' toast--error' : '');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(function () { t.classList.add('toast--show'); });
+    setTimeout(function () {
+      t.classList.remove('toast--show');
+      setTimeout(function () { t.remove(); }, 300);
+    }, type === 'error' ? 4200 : 2000);
+  }
+
+  // ---- Capture + compression pipeline --------------------------------------
+  // Android-safe: the file input must be in the DOM when .click() fires and
+  // removed after the change event.
+  function pickPhoto(onFile) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.setAttribute('capture', 'environment');
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    document.body.appendChild(input);
+    input.addEventListener('change', function () {
+      const file = input.files && input.files[0];
+      if (input.parentNode) input.parentNode.removeChild(input);
+      if (file) onFile(file);
+    }, { once: true });
+    input.click();
+  }
+
+  // Downscale to a 1200px long edge and re-encode as JPEG q0.7 before storing.
+  function compressImage(file) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        const img = new Image();
+        img.onload = function () {
+          const MAX = 1200;
+          let w = img.naturalWidth || img.width;
+          let h = img.naturalHeight || img.height;
+          if (w >= h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+          else if (h > w && h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          try { resolve(canvas.toDataURL('image/jpeg', 0.7)); }
+          catch (e) { reject(e); }
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Store a compressed photo under a key; roll back + warn on quota failure.
+  function storePhoto(project, key, dataUrl) {
+    if (!project.photos[key]) project.photos[key] = [];
+    project.photos[key].push({ dataUrl: dataUrl, ts: Date.now() });
+    touch(project);
+    if (!saveNow()) {
+      // Roll back the in-memory push so UI and storage stay consistent.
+      project.photos[key].pop();
+      if (!project.photos[key].length) delete project.photos[key];
+      toast('Storage full — photo not saved. Delete photos or reset data in Settings.', 'error');
+      return false;
+    }
+    return true;
+  }
+
+  function addPhotoFlow(project, key, onDone) {
+    pickPhoto(function (file) {
+      compressImage(file).then(function (dataUrl) {
+        if (storePhoto(project, key, dataUrl)) onDone();
+      }).catch(function () {
+        toast('Could not process that image.', 'error');
+      });
+    });
+  }
+
+  function photoCount(project, key) {
+    return (project.photos[key] || []).length;
+  }
+
+  // Derive a human title for a photo key ('project' or 'roomId:itemId').
+  function photoKeyTitle(project, key) {
+    if (key === 'project') return 'Project photos';
+    const idx = key.indexOf(':');
+    const roomId = key.slice(0, idx);
+    const itemId = key.slice(idx + 1);
+    return itemMeta(project, roomId, itemId).name;
+  }
+
+  function openPhotosSheet(key) {
+    const p = activeProject();
+    const photos = p.photos[key] || [];
+    const grid = photos.length
+      ? '<div class="thumbs">' + photos.map(function (ph, i) {
+          return '<div class="thumb"><img src="' + ph.dataUrl + '" alt="" />' +
+            '<button class="thumb__del tap" data-action="del-photo" data-key="' + esc(key) + '" data-idx="' + i + '" aria-label="Delete photo">×</button></div>';
+        }).join('') + '</div>'
+      : '<div class="photos-empty">No photos yet. Add one to document condition.</div>';
+    openSheet([
+      '<h2 class="sheet__title">', esc(photoKeyTitle(p, key)), '</h2>',
+      grid,
+      '<button class="btn btn--primary tap" data-action="add-photo" data-key="', esc(key), '" style="width:100%;margin-top:12px">Add photo</button>',
+      '<button class="btn btn--ghost tap" data-action="sheet-close" style="width:100%;margin-top:8px">Done</button>',
+    ].join(''));
+  }
+
+  // ---- Storage meter -------------------------------------------------------
+  function storageBytes() {
+    let total = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const v = localStorage.getItem(k) || '';
+      total += (k.length + v.length) * 2; // UTF-16 ≈ 2 bytes/char
+    }
+    return total;
+  }
+  const STORAGE_CAP = 5 * 1024 * 1024; // iOS localStorage cap ≈ 5MB
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  // ---- CSV price re-upload -------------------------------------------------
+  // Minimal RFC-4180-ish parser (item names contain commas, so we honor quotes).
+  function parseCSV(text) {
+    const rows = []; let row = []; let field = ''; let inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQ) {
+        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+        else field += c;
+      } else if (c === '"') { inQ = true; }
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c !== '\r') { field += c; }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  function applyCsvPrices(text) {
+    const rows = parseCSV(text).filter(function (r) { return r.length && r.join('').trim(); });
+    if (!rows.length) { toast('That CSV looks empty.', 'error'); return; }
+    const header = rows[0].map(function (h) { return h.trim().toLowerCase(); });
+    const idIdx = header.indexOf('id');
+    let costIdx = header.indexOf('cost');
+    if (costIdx < 0) costIdx = header.indexOf('price');
+    if (idIdx < 0 || costIdx < 0) {
+      toast('CSV needs "id" and "cost" columns.', 'error');
+      return;
+    }
+    let updated = 0;
+    for (let r = 1; r < rows.length; r++) {
+      const id = (rows[r][idIdx] || '').trim();
+      const cost = parseFloat((rows[r][costIdx] || '').trim());
+      if (ITEM_BY_ID[id] && !isNaN(cost) && cost >= 0) {
+        state.globalPriceOverrides[id] = cost;
+        updated++;
+      }
+    }
+    saveNow();
+    toast(updated + ' price' + (updated === 1 ? '' : 's') + ' updated across all projects.');
+    openSettingsSheet();
+  }
+
+  function openSettingsSheet() {
+    const used = storageBytes();
+    const pct = Math.min(100, Math.round((used / STORAGE_CAP) * 100));
+    const meterClass = pct >= 85 ? 'meter__fill meter__fill--warn' : 'meter__fill';
+
+    // Editable global default prices for every catalog item.
+    const priceRows = REPAIR_ITEMS.map(function (it) {
+      const ov = state.globalPriceOverrides[it.id];
+      const val = ov != null ? ov : it.cost;
+      const changed = ov != null && ov !== it.cost;
+      return [
+        '<div class="price-row">',
+          '<div class="price-row__main">',
+            '<div class="price-row__name">', esc(it.name), changed ? ' <span class="tag tag--override">edited</span>' : '', '</div>',
+            '<div class="price-row__unit">/', esc(it.unit), '</div>',
+          '</div>',
+          '<input class="price-input tnum" type="number" inputmode="decimal" step="any" min="0" ',
+            'value="', esc(val), '" data-priceid="', it.id, '" aria-label="Default cost for ', esc(it.name), '" />',
+        '</div>',
+      ].join('');
+    }).join('');
+
+    openSheet([
+      '<h2 class="sheet__title">Settings</h2>',
+
+      '<div class="settings-block">',
+        '<div class="settings-block__label">Storage used</div>',
+        '<div class="meter"><div class="', meterClass, '" style="width:', pct, '%"></div></div>',
+        '<div class="hint" style="margin-top:6px">', formatBytes(used), ' of ~', formatBytes(STORAGE_CAP), ' (', pct, '%). Photos are compressed to keep this small.</div>',
+      '</div>',
+
+      '<div class="settings-block">',
+        '<div class="settings-block__label">Update prices from CSV</div>',
+        '<p class="hint" style="margin:0 0 8px">Upload a CSV with <b>id</b> and <b>cost</b> columns. Changes apply to all projects.</p>',
+        '<input class="field" id="csv-input" type="file" accept=".csv,text/csv" style="margin-bottom:0" />',
+      '</div>',
+
+      '<div class="settings-block">',
+        '<div class="settings-block__label">Global default prices</div>',
+        '<p class="hint" style="margin:0 0 8px">Editing a price rolls out across every project. Per-project overrides still win.</p>',
+        '<div class="price-list">', priceRows, '</div>',
+      '</div>',
+
+      '<hr class="divider" />',
+      '<div class="sheet__actions" style="margin-bottom:8px">',
+        '<button class="btn btn--ghost tap" data-action="reset-prices">Reset prices</button>',
+        '<button class="btn btn--danger tap" data-action="reset-all">Reset all data</button>',
+      '</div>',
+      '<button class="btn btn--primary tap" data-action="settings-done" style="width:100%">Done</button>',
+    ].join(''));
+  }
+
+  /* ============================================================= */
+  /* DEAL GUARD                                                     */
+  /* ============================================================= */
+
+  // Compact sticky bar above the footer; never blocks content.
+  function renderDealGuard() {
+    const p = activeProject();
+    if (!p) { el.dealguard.innerHTML = ''; return; }
+    const dg = dealGuard(p);
+    if (!dg.arv) {
+      el.dealguard.innerHTML =
+        '<button class="dg-bar dg-bar--empty tap" data-action="open-dealguard">' +
+          '<span class="dg-bar__title">Deal Guard</span>' +
+          '<span class="dg-bar__hint">Set ARV to see your max offer &rsaquo;</span>' +
+        '</button>';
+      return;
+    }
+    const marginNeg = dg.margin < 0;
+    el.dealguard.innerHTML = [
+      '<button class="dg-bar tap" data-action="open-dealguard">',
+        '<span class="dg-bar__col">',
+          '<span class="dg-bar__k">Max offer</span>',
+          '<span class="dg-bar__v tnum">', money(dg.maxOffer), '</span>',
+        '</span>',
+        '<span class="dg-bar__col">',
+          '<span class="dg-bar__k">Margin</span>',
+          '<span class="dg-bar__v tnum ', (marginNeg ? 'dg-neg' : ''), '">', money(dg.margin), '</span>',
+        '</span>',
+        '<span class="dg-bar__more">Deal Guard &rsaquo;</span>',
+      '</button>',
+    ].join('');
+  }
+
+  // Update Deal Guard numbers without re-rendering the ARV input (hot path).
+  function refreshDealGuardDom() {
+    const p = activeProject();
+    if (!p) return;
+    const dg = dealGuard(p);
+    renderDealGuard(); // the bar has no focused input, safe to rebuild
+    setNodeText('#dg-repairs', money(dg.repairs));
+    setNodeText('#dg-maxoffer', money(dg.maxOffer));
+    setNodeText('#dg-margin', money(dg.margin));
+    setNodeText('#dg-range', money(dg.low) + ' – ' + money(dg.high));
+    const marginNode = document.getElementById('dg-margin');
+    if (marginNode) marginNode.classList.toggle('dg-neg', dg.margin < 0);
+  }
+
+  function openDealGuardSheet() {
+    const p = activeProject();
+    const dg = dealGuard(p);
+    const unrev = unreviewedCritical(p);
+    openSheet([
+      '<h2 class="sheet__title">Deal Guard</h2>',
+      '<label class="sheet__label">ARV — after-repair value</label>',
+      '<input class="field tnum" id="arv-input" type="number" inputmode="decimal" step="any" min="0" ',
+        'value="', (p.meta.arv != null ? esc(p.meta.arv) : ''), '" placeholder="e.g. 220000" />',
+      '<div class="dg-grid">',
+        '<div class="dg-stat"><span class="dg-stat__k">Repair estimate</span><span class="dg-stat__v tnum" id="dg-repairs">', money(dg.repairs), '</span></div>',
+        '<div class="dg-stat dg-stat--hero"><span class="dg-stat__k">Max offer (70% rule)</span><span class="dg-stat__v tnum" id="dg-maxoffer">', money(dg.maxOffer), '</span></div>',
+        '<div class="dg-stat"><span class="dg-stat__k">Projected margin</span><span class="dg-stat__v tnum ', (dg.margin < 0 ? 'dg-neg' : ''), '" id="dg-margin">', money(dg.margin), '</span></div>',
+      '</div>',
+      '<div class="dg-range">Estimate range <span class="tnum" id="dg-range">', money(dg.low), ' – ', money(dg.high), '</span> <span class="hint">— tightens as you review more groups</span></div>',
+      (unrev.length
+        ? '<div class="dg-warn">Not yet reviewed: <b>' + esc(unrev.join(', ')) + '</b>. These usually drive the biggest costs.</div>'
+        : '<div class="dg-ok">All big-ticket systems reviewed.</div>'),
+      '<p class="hint" style="margin-top:12px">Max offer = ARV × 70% − repairs. Margin = ARV − offer − repairs.</p>',
+      '<button class="btn btn--primary tap" data-action="sheet-close" style="width:100%;margin-top:8px">Done</button>',
+    ].join(''));
+  }
+
+  /* ============================================================= */
+  /* EXPORT — styled .xlsx (ExcelJS) + photos, bundled as .zip (JSZip) */
+  /* ============================================================= */
+
+  function sanitizeName(s) {
+    return String(s || 'estimate').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'estimate';
+  }
+  function dateStampLong(d) {
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+  function dateStampFile(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  // Snapshot of what to write per room (effective prices are captured now).
+  function exportModel(project) {
+    return project.rooms.map(function (room) {
+      const groups = [];
+      groupsForRoom(room).forEach(function (g) {
+        const items = groupItemIds(project, room.id, g)
+          .filter(function (id) { const s = getSel(project, room.id, id); return s && s.checked; })
+          .map(function (id) {
+            const meta = itemMeta(project, room.id, id);
+            const cost = effectiveCost(project, room.id, id);
+            const qty = Number(getSel(project, room.id, id).qty) || 0;
+            return { name: meta.name, unit: meta.unit, cost: cost, qty: qty, total: qty * cost };
+          });
+        if (items.length) groups.push({ name: g.name, items: items });
+      });
+      return { label: room.label, groups: groups, total: roomTotal(project, room) };
+    }).filter(function (r) { return r.groups.length; });
+  }
+
+  async function buildWorkbookBuffer(project) {
+    const NAVY = 'FF0F2A43', ACCENT = 'FF0D9488', LIGHT = 'FFF1EFE9', GREY = 'FF5C6773', WHITE = 'FFFFFFFF', LINE = 'FFE4E1D9';
+    const MONEY = '$#,##0.00', QTY = '#,##0.###';
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Spark Homes Repair Estimator';
+    wb.created = new Date();
+    const ws = wb.addWorksheet('Estimate', { views: [{ showGridLines: false }] });
+
+    ws.getColumn(1).width = 46; // Item
+    ws.getColumn(2).width = 16; // Unit
+    ws.getColumn(3).width = 14; // Unit Cost
+    ws.getColumn(4).width = 10; // Qty
+    ws.getColumn(5).width = 16; // Total
+
+    function fill(cell, argb) { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; }
+    function rightAlign(cell) { cell.alignment = { horizontal: 'right' }; }
+
+    // ---- Title block ----
+    ws.mergeCells('A1:E1');
+    const t = ws.getCell('A1');
+    t.value = project.name;
+    t.font = { bold: true, size: 18, color: { argb: NAVY } };
+    ws.getRow(1).height = 26;
+
+    ws.mergeCells('A2:E2');
+    const d = ws.getCell('A2');
+    d.value = 'Repair estimate — ' + dateStampLong(new Date());
+    d.font = { size: 11, color: { argb: GREY } };
+
+    const m = project.meta;
+    const metaParts = [];
+    if (m.sqft) metaParts.push(Number(m.sqft).toLocaleString('en-US') + ' sqft');
+    if (m.beds != null) metaParts.push(m.beds + ' bd');
+    if (m.baths != null) metaParts.push(m.baths + ' ba');
+    if (m.arv) metaParts.push('ARV ' + money(m.arv));
+    ws.mergeCells('A3:E3');
+    ws.getCell('A3').value = metaParts.join('   ·   ');
+    ws.getCell('A3').font = { size: 11, color: { argb: GREY } };
+
+    let r = 5;
+    if (project.notes && project.notes.trim()) {
+      ws.mergeCells('A' + r + ':E' + r);
+      const nc = ws.getCell('A' + r);
+      nc.value = 'Notes: ' + project.notes.trim();
+      nc.font = { size: 11, italic: true, color: { argb: GREY } };
+      nc.alignment = { wrapText: true, vertical: 'top' };
+      ws.getRow(r).height = 32;
+      r += 2;
+    }
+    const rooms = exportModel(project);
+
+    rooms.forEach(function (room) {
+      // Room header band
+      ws.mergeCells('A' + r + ':E' + r);
+      const rc = ws.getCell('A' + r);
+      rc.value = room.label;
+      rc.font = { bold: true, size: 13, color: { argb: WHITE } };
+      fill(rc, NAVY);
+      ws.getRow(r).height = 20;
+      r++;
+
+      // Column headers
+      const hdr = ws.getRow(r);
+      hdr.values = ['Item', 'Unit', 'Unit Cost', 'Qty', 'Total'];
+      hdr.eachCell(function (c) {
+        c.font = { bold: true, color: { argb: NAVY } };
+        fill(c, LIGHT);
+        c.border = { bottom: { style: 'thin', color: { argb: LINE } } };
+      });
+      rightAlign(hdr.getCell(3)); rightAlign(hdr.getCell(4)); rightAlign(hdr.getCell(5));
+      r++;
+
+      room.groups.forEach(function (g) {
+        // Group subheader
+        ws.mergeCells('A' + r + ':E' + r);
+        const gc = ws.getCell('A' + r);
+        gc.value = g.name;
+        gc.font = { italic: true, bold: true, size: 11, color: { argb: GREY } };
+        fill(gc, LIGHT);
+        r++;
+
+        g.items.forEach(function (it) {
+          const row = ws.getRow(r);
+          row.getCell(1).value = it.name;
+          row.getCell(2).value = it.unit;
+          row.getCell(3).value = it.cost; row.getCell(3).numFmt = MONEY; rightAlign(row.getCell(3));
+          row.getCell(4).value = it.qty; row.getCell(4).numFmt = QTY; rightAlign(row.getCell(4));
+          row.getCell(5).value = it.total; row.getCell(5).numFmt = MONEY; rightAlign(row.getCell(5));
+          row.getCell(5).font = { bold: true };
+          row.getCell(1).border = { bottom: { style: 'hair', color: { argb: LINE } } };
+          r++;
+        });
+      });
+
+      // Room subtotal
+      ws.mergeCells('A' + r + ':D' + r);
+      const sc = ws.getCell('A' + r);
+      sc.value = room.label + ' subtotal';
+      rightAlign(sc);
+      sc.font = { bold: true, color: { argb: NAVY } };
+      fill(sc, LIGHT);
+      const stv = ws.getCell('E' + r);
+      stv.value = room.total; stv.numFmt = MONEY; rightAlign(stv);
+      stv.font = { bold: true, color: { argb: NAVY } };
+      fill(stv, LIGHT);
+      r += 2;
+    });
+
+    // ---- Grand total ----
+    ws.mergeCells('A' + r + ':D' + r);
+    const gt = ws.getCell('A' + r);
+    gt.value = 'GRAND TOTAL';
+    rightAlign(gt);
+    gt.font = { bold: true, size: 14, color: { argb: WHITE } };
+    fill(gt, ACCENT);
+    const gtv = ws.getCell('E' + r);
+    gtv.value = projectTotal(project); gtv.numFmt = MONEY; rightAlign(gtv);
+    gtv.font = { bold: true, size: 14, color: { argb: WHITE } };
+    fill(gtv, ACCENT);
+    ws.getRow(r).height = 22;
+
+    return wb.xlsx.writeBuffer();
+  }
+
+  // Add every stored photo to the zip's /photos folder with a readable name.
+  function addPhotosToZip(project, folder) {
+    Object.keys(project.photos).forEach(function (key) {
+      const arr = project.photos[key] || [];
+      let label;
+      if (key === 'project') {
+        label = 'project';
+      } else {
+        const c = key.indexOf(':');
+        const roomId = key.slice(0, c), itemId = key.slice(c + 1);
+        const room = project.rooms.find(function (rm) { return rm.id === roomId; });
+        label = sanitizeName((room ? room.label : 'room') + '-' + itemMeta(project, roomId, itemId).name);
+      }
+      arr.forEach(function (ph, i) {
+        const comma = ph.dataUrl.indexOf(',');
+        const base64 = comma >= 0 ? ph.dataUrl.slice(comma + 1) : '';
+        if (base64) folder.file(label + '-' + (i + 1) + '.jpg', base64, { base64: true });
+      });
+    });
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+  }
+
+  async function exportProject(project) {
+    if (typeof ExcelJS === 'undefined' || typeof JSZip === 'undefined') {
+      toast('Export libraries missing — add vendor/exceljs.min.js and vendor/jszip.min.js.', 'error');
+      return;
+    }
+    toast('Building export…');
+    try {
+      const buffer = await buildWorkbookBuffer(project);
+      const zip = new JSZip();
+      zip.file('estimate.xlsx', buffer);
+      // Always create the photos folder for a consistent bundle shape.
+      const photos = zip.folder('photos');
+      addPhotosToZip(project, photos);
+      const blob = await zip.generateAsync({ type: 'blob' });
+      downloadBlob(blob, sanitizeName(project.name) + '-' + dateStampFile(new Date()) + '.zip');
+      toast('Export ready — check your downloads.');
+    } catch (e) {
+      console.error('Export failed', e);
+      toast('Export failed: ' + (e && e.message ? e.message : 'unknown error'), 'error');
+    }
+  }
+
+  /* ============================================================= */
+  /* PWA — Phase 6                                                   */
+  /* ============================================================= */
+  /* (service worker registration lands in Phase 6) */
+
+  /* ============================================================= */
+  /* BOOT                                                           */
+  /* ============================================================= */
+  function boot() {
+    loadState();
+    seedIfEmpty();
+    // Ensure a valid active room after load.
+    const p = activeProject();
+    if (p && (!state.ui.activeRoomId || !p.rooms.some(function (r) { return r.id === state.ui.activeRoomId; }))) {
+      state.ui.activeRoomId = p.rooms.length ? p.rooms[0].id : null;
+    }
+    installEventDelegation();
+    installLifecycleSaves();
+    render();
+  }
+
+  boot();
+})();
+</script>
+
+<!-- Service worker registration (relative path; scope defaults to './') -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function (err) {
+        console.warn('SW registration failed', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>
