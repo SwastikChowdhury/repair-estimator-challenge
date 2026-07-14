@@ -3,9 +3,11 @@
    GitHub Pages project subpath (scope is this file's directory). */
 
 // Bump this string on every deploy to invalidate the old cache.
-const CACHE = 'spark-estimator-v1';
+const CACHE = 'spark-estimator-v2';
 
-// Precache the entire app shell + vendored libraries + icons.
+// Precache the entire app shell + vendored libraries + icons + brand assets.
+// NOTE: the vendor-ocr/ files (~30MB) are intentionally NOT precached — they are
+// runtime-cached on the first "Scan serial #" tap so install stays fast.
 const PRECACHE = [
   './',
   './index.html',
@@ -14,6 +16,11 @@ const PRECACHE = [
   './vendor/jszip.min.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-180.png',
+  './icons/spark-logo-white.png',
+  './icons/spark-mark.png',
+  './fonts/gfs-neohellenic-latin-400-normal.woff2',
+  './fonts/gfs-neohellenic-latin-700-normal.woff2',
 ];
 
 self.addEventListener('install', function (event) {

@@ -9,10 +9,10 @@
   <!-- PWA manifest + icons (all relative for GitHub Pages subpath deploys) -->
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" href="./icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-180.png" />
 
   <!-- iOS / PWA meta -->
-  <meta name="theme-color" content="#0f2a43" />
+  <meta name="theme-color" content="#121214" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -20,34 +20,52 @@
 
   <style>
     /* ============================================================= */
+    /* FONTS — GFS Neohellenic (vendored, offline)                    */
+    /* ============================================================= */
+    @font-face {
+      font-family: 'GFS Neohellenic';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('./fonts/gfs-neohellenic-latin-400-normal.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'GFS Neohellenic';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('./fonts/gfs-neohellenic-latin-700-normal.woff2') format('woff2');
+    }
+
+    /* ============================================================= */
     /* DESIGN TOKENS                                                  */
     /* ============================================================= */
     :root {
-      /* Palette — deep slate primary, single teal accent, warm neutral bg */
-      --navy: #0f2a43;
-      --accent: #0d9488;
-      --accent-600: #0b7d73;
-      --accent-050: #e6f4f2;
-      --bg: #f7f6f3;
+      /* Palette — Spark: near-black primary, orange accent, warm cream bg */
+      --navy: #121214;
+      --accent: #d55101;
+      --accent-600: #b34300;
+      --accent-050: #fdeee3;
+      --bg: #f8f2ec;
       --surface: #ffffff;
-      --surface-2: #f1efe9;
+      --surface-2: #f3eae1;
       --ink: #1b2530;
       --ink-soft: #5c6773;
       --ink-faint: #9aa3ac;
-      --line: #e4e1d9;
+      --line: #e8ddd1;
       --red: #c0392b;
       --red-050: #fbeae7;
       --amber: #c98a12;
       --amber-050: #fcf3e1;
 
-      /* Type scale: 12 / 14 / 16 / 20 / 28 / 40 */
+      /* Type scale: 12 / 15 / 17 / 20 / 28 / 40 (GFS Neohellenic runs small) */
       --fs-12: 12px;
-      --fs-14: 14px;
-      --fs-16: 16px;
+      --fs-14: 15px;
+      --fs-16: 17px;
       --fs-20: 20px;
       --fs-28: 28px;
       --fs-40: 40px;
-      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font: 'GFS Neohellenic', -apple-system, BlinkMacSystemFont, sans-serif;
 
       /* Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 */
       --sp-1: 4px;
@@ -81,7 +99,8 @@
       -webkit-text-size-adjust: 100%;
       overscroll-behavior-y: none;
     }
-    .tnum { font-variant-numeric: tabular-nums; }
+    /* GFS Neohellenic lacks tabular figures; nudge tracking for column alignment. */
+    .tnum { font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
     button { font-family: inherit; cursor: pointer; }
     /* Minimum 44x44 tap targets everywhere */
     button, .tap { min-height: 44px; min-width: 44px; }
@@ -108,29 +127,40 @@
     }
     .header__row {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: var(--sp-3);
     }
-    .project-btn {
+    .header__brand {
       display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--sp-2);
+      min-width: 0;
+      max-width: 62%;
+    }
+    .header__logo { height: 20px; display: block; }
+    .project-btn {
+      display: inline-flex;
       align-items: center;
       gap: var(--sp-2);
       background: transparent;
-      border: none;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 10px;
       color: #fff;
-      padding: var(--sp-1) 0;
+      padding: 4px 10px;
       text-align: left;
-      max-width: 62%;
+      min-height: 0;
+      max-width: 100%;
     }
     .project-btn__name {
-      font-size: var(--fs-20);
+      font-size: 16px;
       font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .project-btn__chev { opacity: 0.7; font-size: var(--fs-14); }
+    .project-btn__chev { opacity: 0.85; font-size: var(--fs-14); flex: none; }
     .header__total { text-align: right; }
     .header__total-label {
       font-size: var(--fs-12);
@@ -365,6 +395,7 @@
       gap: var(--sp-3);
       padding: var(--sp-3) var(--sp-4);
       border-bottom: 1px solid var(--surface-2);
+      cursor: pointer;
     }
     .item:last-child { border-bottom: none; }
     .item--checked { background: var(--accent-050); }
@@ -462,6 +493,7 @@
     }
     .tag--override { background: var(--amber-050); color: var(--amber); }
     .tag--custom { background: var(--surface-2); color: var(--ink-soft); }
+    .tag--current { background: var(--accent); color: #fff; }
     .tag--suggested { background: var(--amber-050); color: var(--amber); }
 
     /* ---- Equipment year field + age flag -------------------------------- */
@@ -482,6 +514,19 @@
     }
     .year-input::-webkit-outer-spin-button,
     .year-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .serialfield { display: inline-flex; align-items: center; gap: var(--sp-2); }
+    .serialfield__label { font-size: var(--fs-12); color: var(--ink-faint); font-weight: 600; white-space: nowrap; }
+    .serial-input {
+      width: 132px;
+      font-family: inherit;
+      font-size: var(--fs-16);
+      padding: var(--sp-1) var(--sp-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--ink);
+    }
+    .serial-input:focus { outline: none; border-color: var(--accent); }
     .agewarn {
       display: flex;
       align-items: center;
@@ -527,9 +572,10 @@
       grid-template-columns: repeat(3, 1fr);
       gap: var(--sp-2);
       margin-bottom: var(--sp-2);
-      max-height: 46vh;
+      max-height: 52vh;
       overflow-y: auto;
     }
+    .photo-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
     .thumb {
       position: relative;
       aspect-ratio: 1 / 1;
@@ -546,12 +592,37 @@
       min-width: 32px; min-height: 32px;
       border-radius: 999px;
       border: none;
-      background: rgba(15, 42, 67, 0.78);
+      background: rgba(18, 18, 20, 0.78);
       color: #fff;
       font-size: var(--fs-20);
       line-height: 1;
       display: flex; align-items: center; justify-content: center;
     }
+    .photo-caption {
+      width: 100%;
+      font-family: inherit;
+      font-size: var(--fs-12);
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 5px 7px;
+      min-height: 0;
+    }
+    .photo-caption:focus { outline: none; border-color: var(--accent); }
+    .ocr-btn {
+      width: 100%;
+      font-family: inherit;
+      font-size: var(--fs-12);
+      font-weight: 600;
+      color: var(--accent-600);
+      background: var(--accent-050);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 5px 7px;
+      min-height: 0;
+    }
+    .ocr-btn[disabled] { opacity: 0.6; }
     .photos-empty {
       text-align: center;
       color: var(--ink-soft);
@@ -687,6 +758,8 @@
       bottom: 0;
       z-index: 20;
     }
+    /* Hide the sticky bottom bar (Deal Guard + footer) while the keyboard is up. */
+    body.keyboard-open .bottombar { display: none; }
     .footer {
       background: var(--surface);
       border-top: 1px solid var(--line);
@@ -725,14 +798,19 @@
     .sheet {
       width: 100%;
       max-width: 560px;
+      max-height: 85dvh;
+      display: flex;
+      flex-direction: column;
       background: var(--surface);
       border-radius: var(--radius-lg) var(--radius-lg) 0 0;
       padding: var(--sp-4) var(--sp-4) calc(var(--sp-4) + var(--safe-bottom));
       box-shadow: 0 -4px 24px rgba(15,42,67,0.18);
-      animation: sheet-up 200ms ease;
+      animation: sheet-up 160ms ease;
     }
+    /* Body content scrolls; the title stays pinned above it. */
+    .sheet__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     @keyframes sheet-up { from { transform: translateY(16px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
-    .sheet__title { font-size: var(--fs-20); font-weight: 700; margin: 0 0 var(--sp-4); }
+    .sheet__title { font-size: var(--fs-20); font-weight: 700; margin: 0 0 var(--sp-4); flex: none; }
     .sheet__label { display: block; font-size: var(--fs-12); color: var(--ink-soft); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em; }
     .field {
       width: 100%;
@@ -765,6 +843,7 @@
       display: flex;
       align-items: center;
       gap: var(--sp-3);
+      min-height: 56px;
       border: 1px solid var(--line);
       border-radius: var(--radius-sm);
       padding: var(--sp-3);
@@ -1027,6 +1106,17 @@
   const EQUIPMENT_ITEMS = ['as-01', 'as-02', 'as-08', 'as-16'];
   function isEquipment(itemId) { return EQUIPMENT_ITEMS.indexOf(itemId) >= 0; }
 
+  /* Items that carry a serial number (systems + kitchen appliances; roof has none).
+     These get a Serial # field, their own photos, and a "Scan serial #" OCR button. */
+  const SERIAL_ITEMS = ['as-01', 'as-02', 'as-08', 'kt-11', 'kt-12', 'kt-13', 'kt-14', 'kt-15', 'kt-16', 'kt-17'];
+  function isSerialItem(itemId) { return SERIAL_ITEMS.indexOf(itemId) >= 0; }
+  // Parse the itemId out of a photo key ('roomId:itemId'); '' for the 'project' key.
+  function photoKeyItemId(key) {
+    if (!key || key === 'project') return '';
+    const i = key.indexOf(':');
+    return i >= 0 ? key.slice(i + 1) : '';
+  }
+
   // Expected service lifespans (years) for the age-flag heuristic.
   const LIFESPANS = { 'as-01': 18, 'as-02': 15, 'as-08': 11, 'as-16': 22 };
   const EQUIP_LABELS = { 'as-01': 'Furnace', 'as-02': 'Condensing unit', 'as-08': 'Water heater', 'as-16': 'Roof' };
@@ -1054,6 +1144,22 @@
   /* ============================================================= */
   function genId(prefix) {
     return (prefix || 'id') + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+  }
+
+  // Keep only [0-9.] (one decimal point) in a numeric text input, rewriting the
+  // field in place so iOS never surfaces its password/contact autofill bar.
+  function sanitizeDecimal(input) {
+    let v = input.value.replace(/[^0-9.]/g, '');
+    const dot = v.indexOf('.');
+    if (dot >= 0) v = v.slice(0, dot + 1) + v.slice(dot + 1).replace(/\./g, '');
+    if (v !== input.value) input.value = v;
+    return v.trim();
+  }
+  // Keep only digits (year fields).
+  function sanitizeDigits(input) {
+    const v = input.value.replace(/[^0-9]/g, '');
+    if (v !== input.value) input.value = v;
+    return v.trim();
   }
 
   // Escape user-supplied strings before injecting into HTML templates.
@@ -1534,10 +1640,13 @@
       : 'No groups yet';
     el.header.innerHTML = [
       '<div class="header__row">',
-        '<button class="project-btn tap" data-action="open-projects" aria-label="Switch or manage projects">',
-          '<span class="project-btn__name">', esc(p ? p.name : 'No project'), '</span>',
-          '<span class="project-btn__chev">▾</span>',
-        '</button>',
+        '<div class="header__brand">',
+          '<img class="header__logo" src="./icons/spark-logo-white.png" alt="Spark Homes" />',
+          '<button class="project-btn tap" data-action="open-projects" aria-label="Switch or manage projects">',
+            '<span class="project-btn__name">', esc(p ? p.name : 'No project'), '</span>',
+            '<span class="project-btn__chev">▾</span>',
+          '</button>',
+        '</div>',
         '<div class="header__total">',
           '<div class="header__total-label">Estimate</div>',
           '<div class="header__total-value tnum" id="hero-total">', money(lastHero), '</div>',
@@ -1658,21 +1767,21 @@
       ? [
           '<div class="qtyblock">',
             (showSuggestedBadge ? '<span class="tag tag--suggested">suggested</span>' : ''),
-            '<input class="qty tnum" type="number" inputmode="decimal" step="any" min="0" ',
+            '<input class="qty tnum" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" ',
               'value="', esc(qtyVal), '" data-room="', room.id, '" data-item="', itemId, '" aria-label="Quantity" />',
             '<span class="qtyblock__eq">=</span>',
             '<span class="linetotal tnum" data-linetotal="', key, '">', money(lineTotal(project, room.id, itemId)), '</span>',
           '</div>',
         ].join('')
       : (sug != null
-          ? '<span class="item__add">Tap to add · suggests <b>' + sug.toLocaleString('en-US') + '</b> ' + esc(meta.unit || '') + '</span>'
-          : '<span class="item__add">Tap to add</span>');
+          ? '<span class="item__add">Tap row to add · suggests <b>' + sug.toLocaleString('en-US') + '</b> ' + esc(meta.unit || '') + '</span>'
+          : '<span class="item__add">Tap row to add</span>');
 
     return [
-      '<div class="item ', checked ? 'item--checked' : '', '">',
-        '<button class="chk tap" data-action="toggle-item" data-room="', room.id, '" data-item="', itemId, '" data-group="', group.id, '" aria-pressed="', checked, '" aria-label="Toggle ', esc(meta.name), '">',
+      '<div class="item ', checked ? 'item--checked' : '', '" data-action="toggle-item" data-room="', room.id, '" data-item="', itemId, '" data-group="', group.id, '">',
+        '<span class="chk" role="checkbox" aria-checked="', checked, '" aria-label="', esc(meta.name), '">',
           '<span class="chk__box">', (checked ? '✓' : ''), '</span>',
-        '</button>',
+        '</span>',
         '<div class="item__main">',
           '<div class="item__top">',
             '<span class="item__name">', esc(meta.name), meta.isCustom ? ' <span class="tag tag--custom">custom</span>' : '', '</span>',
@@ -1687,8 +1796,37 @@
             '</button>',
             rightHtml,
           '</div>',
-          isEquipment(itemId) ? renderEquipRow(project, room, itemId) : '',
+          isEquipment(itemId)
+            ? renderEquipRow(project, room, itemId)
+            : (isSerialItem(itemId) ? renderApplianceRow(project, room, itemId) : ''),
         '</div>',
+      '</div>',
+    ].join('');
+  }
+
+  // Serial # field (systems + appliances). Editable; can be filled by OCR.
+  function renderSerialField(room, itemId, sel) {
+    if (!isSerialItem(itemId)) return '';
+    const serial = sel && sel.serial != null ? sel.serial : '';
+    return [
+      '<div class="serialfield">',
+        '<label class="serialfield__label">Serial #</label>',
+        '<input class="serial-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" ',
+          'value="', esc(serial), '" placeholder="scan or type" data-room="', room.id, '" data-item="', itemId, '" aria-label="Serial number" />',
+      '</div>',
+    ].join('');
+  }
+
+  // Appliance rows (kitchen equipment): serial field + photos (no age flag).
+  function renderApplianceRow(project, room, itemId) {
+    const n = photoCount(project, selKey(room.id, itemId));
+    const sel = getSel(project, room.id, itemId);
+    return [
+      '<div class="item__equip">',
+        renderSerialField(room, itemId, sel),
+        '<button class="pill tap" data-action="item-photos" data-room="', room.id, '" data-item="', itemId, '">',
+          'Photos', (n ? ' (' + n + ')' : ''),
+        '</button>',
       '</div>',
     ].join('');
   }
@@ -1714,9 +1852,10 @@
       '<div class="item__equip">',
         '<div class="yearfield">',
           '<label class="yearfield__label">Installed</label>',
-          '<input class="year-input tnum" type="number" inputmode="numeric" min="1900" max="', CURRENT_YEAR, '" ',
+          '<input class="year-input tnum" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" maxlength="4" ',
             'value="', esc(year), '" placeholder="year" data-room="', room.id, '" data-item="', itemId, '" aria-label="Install year" />',
         '</div>',
+        renderSerialField(room, itemId, sel),
         '<button class="pill tap" data-action="item-photos" data-room="', room.id, '" data-item="', itemId, '">',
           'Photos', (n ? ' (' + n + ')' : ''),
         '</button>',
@@ -1781,6 +1920,18 @@
   function openSheet(html) {
     if (sheetCleanup) { sheetCleanup(); sheetCleanup = null; }
     el.sheet.innerHTML = html;
+    // Keep the title pinned; move the rest of the body into a scroll container
+    // so tall sheets (Settings, Photos) scroll without hiding the title.
+    const title = el.sheet.querySelector('.sheet__title');
+    const scroll = document.createElement('div');
+    scroll.className = 'sheet__scroll';
+    let node = title ? title.nextSibling : el.sheet.firstChild;
+    while (node) {
+      const next = node.nextSibling;
+      scroll.appendChild(node);
+      node = next;
+    }
+    el.sheet.appendChild(scroll);
     el.overlay.classList.add('overlay--open');
   }
   function closeSheet() {
@@ -1796,7 +1947,7 @@
         '<h2 class="sheet__title">', esc(opts.title), '</h2>',
         '<label class="sheet__label">', esc(opts.label || 'Name'), '</label>',
         '<input class="field" id="prompt-input" type="text" value="', esc(opts.value || ''), '" ',
-          'placeholder="', esc(opts.placeholder || ''), '" autocomplete="off" />',
+          'placeholder="', esc(opts.placeholder || ''), '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />',
         '<div class="sheet__actions">',
           '<button class="btn btn--ghost tap" data-action="prompt-cancel">Cancel</button>',
           '<button class="btn btn--primary tap" data-action="prompt-ok">', esc(opts.ok || 'Save'), '</button>',
@@ -1852,7 +2003,10 @@
   }
 
   function openProjectsSheet() {
+    // Current project pinned first; the rest ordered by most recently updated.
     const ids = Object.keys(state.projects).sort(function (a, b) {
+      if (a === state.activeProjectId) return -1;
+      if (b === state.activeProjectId) return 1;
       return state.projects[b].updatedAt - state.projects[a].updatedAt;
     });
     const rows = ids.map(function (id) {
@@ -1862,7 +2016,8 @@
       return [
         '<div class="proj-row ', active ? 'proj-row--active' : '', '">',
           '<button class="proj-row__main tap" data-action="switch-project" data-id="', id, '">',
-            '<div class="proj-row__name">', esc(p.name), '</div>',
+            '<div class="proj-row__name">', esc(p.name),
+              (active ? ' <span class="tag tag--current">Current</span>' : ''), '</div>',
             '<div class="proj-row__meta">', roomCount, ' room', (roomCount === 1 ? '' : 's'),
               ' · <span class="tnum">', money(projectTotal(p)), '</span></div>',
           '</button>',
@@ -1886,15 +2041,15 @@
     openSheet([
       '<h2 class="sheet__title">New estimate</h2>',
       '<label class="sheet__label">Property name / address</label>',
-      '<input class="field" id="np-name" type="text" placeholder="e.g. 118 Oak Ave" autocomplete="off" />',
+      '<input class="field" id="np-name" type="text" placeholder="e.g. 118 Oak Ave" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />',
       '<label class="sheet__label">Square footage (powers quantity suggestions)</label>',
-      '<input class="field tnum" id="np-sqft" type="number" inputmode="numeric" min="0" placeholder="e.g. 1400" />',
+      '<input class="field tnum" id="np-sqft" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="e.g. 1400" />',
       '<div style="display:flex;gap:12px">',
-        '<div style="flex:1"><label class="sheet__label">Beds</label><input class="field tnum" id="np-beds" type="number" inputmode="numeric" min="0" placeholder="3" /></div>',
-        '<div style="flex:1"><label class="sheet__label">Baths</label><input class="field tnum" id="np-baths" type="number" inputmode="numeric" min="0" placeholder="2" /></div>',
+        '<div style="flex:1"><label class="sheet__label">Beds</label><input class="field tnum" id="np-beds" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="3" /></div>',
+        '<div style="flex:1"><label class="sheet__label">Baths</label><input class="field tnum" id="np-baths" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="2" /></div>',
       '</div>',
       '<label class="sheet__label">ARV — after-repair value (optional)</label>',
-      '<input class="field tnum" id="np-arv" type="number" inputmode="numeric" min="0" placeholder="e.g. 220000" />',
+      '<input class="field tnum" id="np-arv" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="e.g. 220000" />',
       '<div class="sheet__actions">',
         '<button class="btn btn--ghost tap" data-action="np-cancel">Cancel</button>',
         '<button class="btn btn--primary tap" data-action="np-create">Create</button>',
@@ -1926,7 +2081,7 @@
     openSheet([
       '<h2 class="sheet__title">Notes</h2>',
       '<label class="sheet__label">Walkthrough notes for ', esc(proj.name), '</label>',
-      '<textarea class="field" id="notes-input" rows="6" placeholder="e.g. Seller mentioned roof leak over garage; verify foundation crack in NE corner." style="resize:vertical">', esc(proj.notes || ''), '</textarea>',
+      '<textarea class="field" id="notes-input" rows="6" placeholder="e.g. Seller mentioned roof leak over garage; verify foundation crack in NE corner." autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="enter" style="resize:vertical">', esc(proj.notes || ''), '</textarea>',
       '<div class="sheet__actions">',
         '<button class="btn btn--ghost tap" data-action="notes-cancel">Cancel</button>',
         '<button class="btn btn--primary tap" data-action="notes-save">Save</button>',
@@ -2170,6 +2325,9 @@
         openPhotosSheet(key);
         break;
       }
+      case 'scan-serial':
+        scanSerial(target, target.dataset.key, parseInt(target.dataset.idx, 10));
+        break;
 
       /* ----- Settings ----- */
       case 'open-settings':
@@ -2234,6 +2392,10 @@
       }
       // These are handled by their own sheet-local listeners.
       if (/^(prompt|confirm|cost|ci|np|notes)-/.test(action)) return;
+      // Whole-row tap toggles the item, but taps on its interactive parts
+      // (qty/serial/year inputs, cost, delete, photos, age-add, scan) do their own thing.
+      if (action === 'toggle-item' &&
+          e.target.closest('input, .unit, .item__x, .pill, .agewarn__add, .qtyblock, .ocr-btn')) return;
       handleAction(action, actEl);
     });
 
@@ -2248,7 +2410,7 @@
         const roomId = t.dataset.room, itemId = t.dataset.item;
         const room = p.rooms.find(function (r) { return r.id === roomId; });
         const sel = ensureSel(p, roomId, itemId);
-        const raw = t.value.trim();
+        const raw = sanitizeDecimal(t);
         sel.qty = raw === '' ? null : Math.max(0, parseFloat(raw) || 0);
         sel.qtySuggested = false; // user has taken ownership of this quantity
         touch(p);
@@ -2260,7 +2422,7 @@
       // Global default price edit (Settings) — applies live across all projects.
       if (t.classList.contains('price-input')) {
         const id = t.dataset.priceid;
-        const raw = t.value.trim();
+        const raw = sanitizeDecimal(t);
         if (raw === '') { delete state.globalPriceOverrides[id]; }
         else { state.globalPriceOverrides[id] = Math.max(0, parseFloat(raw) || 0); }
         scheduleSave();
@@ -2271,10 +2433,42 @@
       if (t.id === 'arv-input') {
         const p = activeProject();
         if (!p) return;
-        const raw = t.value.trim();
+        const raw = sanitizeDecimal(t);
         p.meta.arv = raw === '' ? null : Math.max(0, parseFloat(raw) || 0);
         touch(p);
         refreshDealGuardDom();
+        scheduleSave();
+        return;
+      }
+
+      // Year field: keep only digits while typing (value is committed on change).
+      if (t.classList.contains('year-input')) {
+        sanitizeDigits(t);
+        return;
+      }
+
+      // Photo caption — save (debounced) to the photo object.
+      if (t.classList.contains('photo-caption')) {
+        const p = activeProject();
+        if (!p) return;
+        const key = t.dataset.captionKey, idx = parseInt(t.dataset.idx, 10);
+        const arr = p.photos[key];
+        if (arr && arr[idx]) {
+          arr[idx].caption = t.value;
+          touch(p);
+          scheduleSave();
+        }
+        return;
+      }
+
+      // Equipment serial number — save (debounced) to the selection.
+      if (t.classList.contains('serial-input')) {
+        const p = activeProject();
+        if (!p) return;
+        const sel = ensureSel(p, t.dataset.room, t.dataset.item);
+        const raw = t.value.trim();
+        sel.serial = raw === '' ? null : raw;
+        touch(p);
         scheduleSave();
         return;
       }
@@ -2301,13 +2495,25 @@
         if (!p) return;
         const roomId = t.dataset.room, itemId = t.dataset.item;
         const sel = ensureSel(p, roomId, itemId);
-        const raw = t.value.trim();
+        const raw = sanitizeDigits(t);
         const yr = parseInt(raw, 10);
         sel.year = (raw === '' || isNaN(yr)) ? null : yr;
         touch(p);
         saveNow();
         render({ preserveScroll: true });
         return;
+      }
+    });
+
+    // Enter acts as "Done" in the numeric fields — blur to dismiss the keyboard.
+    document.body.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      const t = e.target;
+      if (t && t.classList && (t.classList.contains('qty') ||
+          t.classList.contains('price-input') || t.classList.contains('year-input') ||
+          t.id === 'arv-input' || t.id === 'cost-input' || t.classList.contains('serial-input'))) {
+        e.preventDefault();
+        t.blur();
       }
     });
   }
@@ -2323,7 +2529,7 @@
     openSheet([
       '<h2 class="sheet__title">', esc(meta.name), '</h2>',
       '<label class="sheet__label">Unit cost (this project only) · per ', esc(meta.unit || 'unit'), '</label>',
-      '<input class="field tnum" id="cost-input" type="number" inputmode="decimal" step="any" min="0" value="', esc(current), '" />',
+      '<input class="field tnum" id="cost-input" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" value="', esc(current), '" />',
       '<p class="hint" style="margin:-8px 0 16px">Catalog default: ', unitMoney(defaultCost), '</p>',
       '<div class="sheet__actions">',
         '<button class="btn btn--ghost tap" data-action="cost-reset">Reset to default</button>',
@@ -2357,11 +2563,11 @@
     openSheet([
       '<h2 class="sheet__title">Add custom item</h2>',
       '<label class="sheet__label">Item name</label>',
-      '<input class="field" id="ci-name" type="text" placeholder="e.g. Chimney rebuild" autocomplete="off" />',
+      '<input class="field" id="ci-name" type="text" placeholder="e.g. Chimney rebuild" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />',
       '<label class="sheet__label">Unit cost</label>',
-      '<input class="field tnum" id="ci-cost" type="number" inputmode="decimal" step="any" min="0" placeholder="0" />',
+      '<input class="field tnum" id="ci-cost" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="0" />',
       '<label class="sheet__label">Unit</label>',
-      '<input class="field" id="ci-unit" type="text" placeholder="e.g. ea. / sqft / flat" autocomplete="off" />',
+      '<input class="field" id="ci-unit" type="text" placeholder="e.g. ea. / sqft / flat" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />',
       '<div class="sheet__actions">',
         '<button class="btn btn--ghost tap" data-action="ci-cancel">Cancel</button>',
         '<button class="btn btn--primary tap" data-action="ci-save">Add item</button>',
@@ -2492,10 +2698,19 @@
   function openPhotosSheet(key) {
     const p = activeProject();
     const photos = p.photos[key] || [];
+    const canScan = isSerialItem(photoKeyItemId(key));
     const grid = photos.length
       ? '<div class="thumbs">' + photos.map(function (ph, i) {
-          return '<div class="thumb"><img src="' + ph.dataUrl + '" alt="" />' +
-            '<button class="thumb__del tap" data-action="del-photo" data-key="' + esc(key) + '" data-idx="' + i + '" aria-label="Delete photo">×</button></div>';
+          return '<div class="photo-cell">' +
+            '<div class="thumb"><img src="' + ph.dataUrl + '" alt="" />' +
+              '<button class="thumb__del tap" data-action="del-photo" data-key="' + esc(key) + '" data-idx="' + i + '" aria-label="Delete photo">×</button></div>' +
+            '<input class="photo-caption" type="text" value="' + esc(ph.caption || '') + '" ' +
+              'data-caption-key="' + esc(key) + '" data-idx="' + i + '" ' +
+              'placeholder="Label — e.g. Furnace serial" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Photo caption" />' +
+            (canScan
+              ? '<button class="ocr-btn" data-action="scan-serial" data-key="' + esc(key) + '" data-idx="' + i + '">Scan serial #</button>'
+              : '') +
+          '</div>';
         }).join('') + '</div>'
       : '<div class="photos-empty">No photos yet. Add one to document condition.</div>';
     openSheet([
@@ -2582,7 +2797,7 @@
             '<div class="price-row__name">', esc(it.name), changed ? ' <span class="tag tag--override">edited</span>' : '', '</div>',
             '<div class="price-row__unit">/', esc(it.unit), '</div>',
           '</div>',
-          '<input class="price-input tnum" type="number" inputmode="decimal" step="any" min="0" ',
+          '<input class="price-input tnum" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" ',
             'value="', esc(val), '" data-priceid="', it.id, '" aria-label="Default cost for ', esc(it.name), '" />',
         '</div>',
       ].join('');
@@ -2672,7 +2887,7 @@
     openSheet([
       '<h2 class="sheet__title">Deal Guard</h2>',
       '<label class="sheet__label">ARV — after-repair value</label>',
-      '<input class="field tnum" id="arv-input" type="number" inputmode="decimal" step="any" min="0" ',
+      '<input class="field tnum" id="arv-input" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" ',
         'value="', (p.meta.arv != null ? esc(p.meta.arv) : ''), '" placeholder="e.g. 220000" />',
       '<div class="dg-grid">',
         '<div class="dg-stat"><span class="dg-stat__k">Repair estimate</span><span class="dg-stat__v tnum" id="dg-repairs">', money(dg.repairs), '</span></div>',
@@ -2712,8 +2927,11 @@
           .map(function (id) {
             const meta = itemMeta(project, room.id, id);
             const cost = effectiveCost(project, room.id, id);
-            const qty = Number(getSel(project, room.id, id).qty) || 0;
-            return { name: meta.name, unit: meta.unit, cost: cost, qty: qty, total: qty * cost };
+            const s = getSel(project, room.id, id);
+            const qty = Number(s.qty) || 0;
+            const serial = s.serial && String(s.serial).trim();
+            const name = serial ? meta.name + ' — S/N ' + serial : meta.name;
+            return { name: name, unit: meta.unit, cost: cost, qty: qty, total: qty * cost };
           });
         if (items.length) groups.push({ name: g.name, items: items });
       });
@@ -2722,7 +2940,7 @@
   }
 
   async function buildWorkbookBuffer(project) {
-    const NAVY = 'FF0F2A43', ACCENT = 'FF0D9488', LIGHT = 'FFF1EFE9', GREY = 'FF5C6773', WHITE = 'FFFFFFFF', LINE = 'FFE4E1D9';
+    const NAVY = 'FF121214', ACCENT = 'FFD55101', LIGHT = 'FFF3EAE1', GREY = 'FF5C6773', WHITE = 'FFFFFFFF', LINE = 'FFE4E1D9';
     const MONEY = '$#,##0.00', QTY = '#,##0.###';
 
     const wb = new ExcelJS.Workbook();
@@ -2850,19 +3068,22 @@
   function addPhotosToZip(project, folder) {
     Object.keys(project.photos).forEach(function (key) {
       const arr = project.photos[key] || [];
-      let label;
+      // Fallback label from the room-item (or 'project') when a photo has no caption.
+      let fallback;
       if (key === 'project') {
-        label = 'project';
+        fallback = 'project';
       } else {
         const c = key.indexOf(':');
         const roomId = key.slice(0, c), itemId = key.slice(c + 1);
         const room = project.rooms.find(function (rm) { return rm.id === roomId; });
-        label = sanitizeName((room ? room.label : 'room') + '-' + itemMeta(project, roomId, itemId).name);
+        fallback = (room ? room.label : 'room') + '-' + itemMeta(project, roomId, itemId).name;
       }
       arr.forEach(function (ph, i) {
         const comma = ph.dataUrl.indexOf(',');
         const base64 = comma >= 0 ? ph.dataUrl.slice(comma + 1) : '';
-        if (base64) folder.file(label + '-' + (i + 1) + '.jpg', base64, { base64: true });
+        if (!base64) return;
+        const label = sanitizeName((ph.caption && ph.caption.trim()) || fallback || 'project');
+        folder.file(label + '-' + (i + 1) + '.jpg', base64, { base64: true });
       });
     });
   }
@@ -2905,8 +3126,137 @@
   /* (service worker registration lands in Phase 6) */
 
   /* ============================================================= */
+  /* SERIAL OCR — lazy-loaded Tesseract; never blocks the app       */
+  /* ============================================================= */
+  // Nothing here loads until the first "Scan serial #" tap.
+  let ocrScriptPromise = null; // resolves once tesseract.min.js is injected
+  let ocrWorker = null;        // one cached worker for the whole session
+
+  function loadTesseractScript() {
+    if (typeof Tesseract !== 'undefined') return Promise.resolve();
+    if (ocrScriptPromise) return ocrScriptPromise;
+    ocrScriptPromise = new Promise(function (resolve, reject) {
+      const s = document.createElement('script');
+      s.src = './vendor-ocr/tesseract.min.js';
+      s.onload = function () { resolve(); };
+      s.onerror = function () { ocrScriptPromise = null; reject(new Error('Failed to load OCR engine')); };
+      document.head.appendChild(s);
+    });
+    return ocrScriptPromise;
+  }
+
+  function getOcrWorker() {
+    if (ocrWorker) return Promise.resolve(ocrWorker);
+    return loadTesseractScript().then(function () {
+      return Tesseract.createWorker('eng', 1, {
+        workerPath: './vendor-ocr/worker.min.js',
+        corePath: './vendor-ocr/',
+        langPath: './vendor-ocr/',
+        gzip: true,
+      });
+    }).then(function (w) { ocrWorker = w; return w; });
+  }
+
+  // Accuracy gate: from recognized words, keep serial-shaped tokens with
+  // confidence >= 60, preferring ones mixing letters AND digits.
+  function pickSerialToken(words) {
+    const re = /^[A-Z0-9][A-Z0-9\-\/]{5,19}$/i;
+    let best = null;
+    (words || []).forEach(function (w) {
+      const text = (w.text || '').trim();
+      const conf = typeof w.confidence === 'number' ? w.confidence : 0;
+      if (conf < 60 || !re.test(text)) return;
+      const mixed = /[A-Za-z]/.test(text) && /[0-9]/.test(text);
+      const score = conf + (mixed ? 1000 : 0);
+      if (!best || score > best.score) best = { text: text, score: score };
+    });
+    return best;
+  }
+
+  function focusSerialField(roomId, itemId) {
+    const field = document.querySelector('.serial-input[data-room="' + roomId + '"][data-item="' + itemId + '"]');
+    if (field) {
+      try { field.scrollIntoView({ block: 'center' }); } catch (e) {}
+      field.focus();
+    }
+  }
+
+  function scanSerial(btn, key, idx) {
+    const p = activeProject();
+    if (!p || !btn || btn.dataset.busy === '1') return;
+    const arr = p.photos[key] || [];
+    const ph = arr[idx];
+    if (!ph) return;
+    const c = key.indexOf(':');
+    if (c < 0) return;
+    const roomId = key.slice(0, c), itemId = key.slice(c + 1);
+
+    // Disable only this button; the rest of the app stays fully usable.
+    btn.dataset.busy = '1';
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Scanning…';
+    function restore() { btn.disabled = false; btn.textContent = originalText; btn.dataset.busy = ''; }
+
+    const timeout = new Promise(function (_, reject) {
+      setTimeout(function () { reject(new Error('timeout')); }, 25000);
+    });
+    const run = getOcrWorker().then(function (worker) {
+      return worker.setParameters({
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/. ',
+      }).then(function () { return worker.recognize(ph.dataUrl); });
+    });
+
+    Promise.race([run, timeout]).then(function (result) {
+      const words = result && result.data ? result.data.words : null;
+      const best = pickSerialToken(words);
+      restore();
+      if (!best) {
+        toast("Couldn't read a serial — enter it manually", 'error');
+        focusSerialField(roomId, itemId);
+        return;
+      }
+      const token = best.text.toUpperCase();
+      const sel = ensureSel(p, roomId, itemId);
+      sel.serial = token;
+      touch(p); saveNow();
+      // Reflect on the row (it renders behind the open photos sheet).
+      render({ preserveScroll: true });
+      const field = document.querySelector('.serial-input[data-room="' + roomId + '"][data-item="' + itemId + '"]');
+      if (field) field.value = token;
+      toast('Serial detected — please verify');
+    }).catch(function () {
+      restore();
+      toast("Couldn't read a serial — enter it manually", 'error');
+      focusSerialField(roomId, itemId);
+    });
+  }
+
+  /* ============================================================= */
   /* BOOT                                                           */
   /* ============================================================= */
+  // While the on-screen keyboard is open, the visual viewport shrinks; hide the
+  // sticky bottom bars so they don't crowd the field being typed into.
+  function installKeyboardHandling() {
+    if (window.visualViewport) {
+      const vv = window.visualViewport;
+      const base = vv.height;
+      vv.addEventListener('resize', function () {
+        document.body.classList.toggle('keyboard-open', base - vv.height > 140);
+      });
+    }
+    // When a list field gains focus, center it once the keyboard has settled.
+    document.addEventListener('focusin', function (e) {
+      const el = e.target;
+      if (el && el.closest && el.closest('.list') &&
+          (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+        setTimeout(function () {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }, 250);
+      }
+    });
+  }
+
   function boot() {
     loadState();
     seedIfEmpty();
@@ -2917,6 +3267,7 @@
     }
     installEventDelegation();
     installLifecycleSaves();
+    installKeyboardHandling();
     render();
   }
 

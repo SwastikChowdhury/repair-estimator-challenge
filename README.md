@@ -6,7 +6,7 @@ Walk a property room by room, tap the repairs it needs, watch the total update l
 
 Built as a single self-contained `index.html`.
 
-> **Live demo:** _enable GitHub Pages, then drop the URL here_ — `https://<user>.github.io/repair-estimator-challenge/`
+> **Live demo:** https://swastikchowdhury.github.io/repair-estimator-challenge/
 
 ---
 
@@ -80,8 +80,10 @@ The entire runtime lives in `index.html`, split into labelled sections:
 index.html            the entire app (HTML + CSS + JS inline)
 sw.js                 cache-first, versioned service worker
 manifest.json         PWA manifest (relative start_url / scope)
-icons/                app icons (192, 512 maskable)
+icons/                app icons (180, 192, 512) + Spark brand marks
+fonts/                GFS Neohellenic (vendored .woff2)
 vendor/               ExcelJS + JSZip (loaded via relative <script>)
+vendor-ocr/           Tesseract.js engine + eng data (lazy, not precached)
 data/repair-items.js  source of record for the 108-item catalog
 ```
 
@@ -89,12 +91,19 @@ data/repair-items.js  source of record for the 108-item catalog
 
 ## Libraries
 
-Both are **vendored locally** and loaded with relative `<script>` tags — never a CDN — so export works offline and the service worker can precache them.
+All libraries are **vendored locally** and loaded with relative `<script>` tags — never a CDN — so the app works offline and the service worker can cache them.
 
 - **ExcelJS 4.4.0** — builds the styled workbook
 - **JSZip 3.10.1** — bundles the workbook + photos
+- **Tesseract.js** — on-device OCR for serial-number scanning (see below)
 
-No other runtime dependencies; no web fonts (system font stack).
+The **GFS Neohellenic** font is vendored in `fonts/` (two `.woff2` weights, `font-display: swap`) and precached.
+
+### Serial-number OCR (offline, lazy)
+
+Equipment and kitchen appliances have a **Serial #** field. From an item's Photos sheet you can tap **Scan serial #** on any photo to read the number with on-device OCR.
+
+The Tesseract engine and language data live in `vendor-ocr/` (~30 MB) and are **not** precached, so installs stay fast — nothing loads until the first scan. After that first scan the service worker's runtime cache stores those files, so scanning works offline thereafter. Results are accuracy-gated and always shown for you to verify, never inserted silently.
 
 ---
 
