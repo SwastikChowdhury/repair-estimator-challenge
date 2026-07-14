@@ -26,7 +26,7 @@ Everything runs in a single `index.html` (vanilla JS/CSS, no build step), organi
 - **One price function.** Per-project override → global override → catalog default. Global edits roll out live across projects; exports snapshot prices at export time.
 - **Protected hot path.** Typing a quantity never triggers a re-render (which would blur the input mid-walkthrough); only the affected totals update via targeted DOM writes.
 - **Offline-first by construction.** All assets vendored and precached by a versioned cache-first service worker; the ~30 MB OCR engine is deliberately *not* precached — it lazy-loads on the first "Scan serial #" tap (network needed once), then works offline via the runtime cache.
-- **Creative addition — Walkthrough Intelligence:** sqft-based quantity suggestions (badged, editable, never auto-checked), equipment age flags with one-tap add, and Deal Guard (ARV → max offer via the 70% rule, an estimate range that narrows as groups get reviewed, and a pre-export warning if big-ticket systems are unreviewed). Details in the PDF writeup.
+- **Creative addition — Walkthrough Intelligence:** sqft-based quantity suggestions for unit-conversion items (roof, attic, trim — badged, editable, never auto-checked), equipment age flags with one-tap add, and Deal Guard (ARV → max offer via the 70% rule, an estimate range that narrows as groups get reviewed, and a pre-export warning if big-ticket systems are unreviewed). Details in the PDF writeup.
 
 First launch seeds a populated demo project (*742 Maple St — Demo*) so the first screen shows every feature.
 

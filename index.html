@@ -1160,9 +1160,6 @@
   const EQUIP_LABELS = { 'as-01': 'Furnace', 'as-02': 'Condensing unit', 'as-08': 'Water heater', 'as-16': 'Roof' };
   const CURRENT_YEAR = new Date().getFullYear();
 
-  // Catalog flooring items (per-sqft) used by the quantity pre-fill.
-  const FLOORING_IDS = ['ig-01', 'ig-02', 'ig-03', 'ig-04', 'ig-05', 'ig-06'];
-
   /* ============================================================= */
   /* STATE                                                         */
   /* ============================================================= */
@@ -1333,19 +1330,11 @@
   }
 
   /* Quantity pre-fill — suggested starting qty from project square footage.
+     Unit-conversion items only (trim LF, roof bundles, attic bundles).
      Suggestions are hints only: shown badged, fully editable, never auto-checked. */
   function suggestedQty(project, room, itemId) {
     const sqft = Number(project.meta.sqft) || 0;
     if (!sqft) return null;
-    const wholeHouse = room.type === 'interior';
-    if (FLOORING_IDS.indexOf(itemId) >= 0) {
-      if (!wholeHouse) return null;
-      return Math.round(sqft);                                                 // flooring ≈ sqft
-    }
-    if (itemId === 'ig-07') {
-      if (!wholeHouse) return null;
-      return Math.round(2.75 * sqft);                                            // interior paint ≈ 2.75 × sqft
-    }
     if (itemId === 'ig-19') return Math.round(1.5 * 4 * Math.sqrt(sqft));      // trim LF ≈ 1.5 × perimeter of square footprint
     if (itemId === 'as-16') return Math.max(1, Math.round(sqft / 225));        // roof (unit is per 225 sqft)
     if (itemId === 'as-22') return Math.max(1, Math.round(sqft / 1600));       // attic insulation (per ~1,600 sqft)
@@ -1596,15 +1585,9 @@
       p.selections[selKey(room.id, itemId)] =
         Object.assign({ checked: false, qty: null, unitCostOverride: null, year: null }, opts);
     }
-    // Check an item using its sqft suggestion (keeps the "suggested" badge).
-    function checkSuggested(room, itemId) {
-      const q = suggestedQty(p, room, itemId);
-      set(room, itemId, { checked: true, qty: q != null ? q : 1, qtySuggested: q != null });
-    }
-
-    // Interior / General — suggestions + a flat item, Pest Control = no action.
-    checkSuggested(interior, 'ig-01');                       // Refinish hardwood ≈ 1,400 sqft
-    checkSuggested(interior, 'ig-07');                       // Interior paint ≈ 3,850
+    // Interior / General — partial-scope flooring/paint + a flat item, Pest Control = no action.
+    set(interior, 'ig-01', { checked: true, qty: 350 });    // Refinish hardwood — partial scope
+    set(interior, 'ig-07', { checked: true, qty: 600 });    // Interior paint — partial scope
     set(interior, 'ig-20', { checked: true, qty: 1 });      // MISC / Punch list
     p.selections[selKey(interior.id, naItemId('ig-pest'))] =
       { checked: true, qty: null, unitCostOverride: null, year: null }; // No action needed
