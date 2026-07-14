@@ -807,10 +807,42 @@
       box-shadow: 0 -4px 24px rgba(15,42,67,0.18);
       animation: sheet-up 160ms ease;
     }
-    /* Body content scrolls; the title stays pinned above it. */
+    /* Drag-handle cue: the universal "this is a dismissible sheet" signal. */
+    .sheet::before {
+      content: '';
+      flex: none;
+      width: 36px;
+      height: 4px;
+      border-radius: 999px;
+      background: #d9cebf;
+      margin: 0 auto var(--sp-3);
+    }
+    /* Body content scrolls; the header (title + close) stays pinned above it. */
     .sheet__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     @keyframes sheet-up { from { transform: translateY(16px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
-    .sheet__title { font-size: var(--fs-20); font-weight: 700; margin: 0 0 var(--sp-4); flex: none; }
+    .sheet__head {
+      flex: none;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
+    }
+    .sheet__title { font-size: var(--fs-20); font-weight: 700; margin: 0; flex: 1; min-width: 0; }
+    .sheet__close {
+      flex: none;
+      width: 44px; height: 44px;
+      min-width: 44px; min-height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
+      margin: -4px -6px 0 0;
+      background: transparent;
+      border: none;
+      border-radius: 999px;
+      color: var(--ink-soft);
+      font-size: var(--fs-20);
+      line-height: 1;
+    }
     .sheet__label { display: block; font-size: var(--fs-12); color: var(--ink-soft); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em; }
     .field {
       width: 100%;
@@ -1931,6 +1963,15 @@
       scroll.appendChild(node);
       node = next;
     }
+    // Always-visible header: title on the left, a ✕ close button on the right.
+    if (title) {
+      const head = document.createElement('div');
+      head.className = 'sheet__head';
+      el.sheet.insertBefore(head, title);
+      head.appendChild(title);
+      head.insertAdjacentHTML('beforeend',
+        '<button class="sheet__close tap" data-action="sheet-close" aria-label="Close">\u2715</button>');
+    }
     el.sheet.appendChild(scroll);
     el.overlay.classList.add('overlay--open');
   }
@@ -2299,6 +2340,7 @@
       /* ----- Sheet / overlay ----- */
       case 'sheet-close':
         closeSheet();
+        render({ preserveScroll: true });
         break;
 
       /* ----- Photos ----- */
@@ -2332,10 +2374,6 @@
       /* ----- Settings ----- */
       case 'open-settings':
         openSettingsSheet();
-        break;
-      case 'settings-done':
-        closeSheet();
-        render({ preserveScroll: true });
         break;
       case 'reset-prices': {
         const ok = await confirmDialog({ title: 'Reset prices?', message: 'Clear all global price edits and return to catalog defaults?', ok: 'Reset', danger: true });
@@ -2825,11 +2863,10 @@
       '</div>',
 
       '<hr class="divider" />',
-      '<div class="sheet__actions" style="margin-bottom:8px">',
+      '<div class="sheet__actions">',
         '<button class="btn btn--ghost tap" data-action="reset-prices">Reset prices</button>',
         '<button class="btn btn--danger tap" data-action="reset-all">Reset all data</button>',
       '</div>',
-      '<button class="btn btn--primary tap" data-action="settings-done" style="width:100%">Done</button>',
     ].join(''));
   }
 
@@ -3238,23 +3275,45 @@
   // While the on-screen keyboard is open, the visual viewport shrinks; hide the
   // sticky bottom bars so they don't crowd the field being typed into.
   function installKeyboardHandling() {
-    if (window.visualViewport) {
-      const vv = window.visualViewport;
-      const base = vv.height;
-      vv.addEventListener('resize', function () {
-        document.body.classList.toggle('keyboard-open', base - vv.height > 140);
-      });
+    // Hide the sticky bottom bar only while the user is genuinely typing.
+    // A live focus-driven flag (not a boot-time viewport snapshot) means an
+    // emulator/browser resize with no field focused can't leave the bar stuck.
+    let typing = false;
+    let removeTimer = null;
+
+    function updateKeyboardOpen() {
+      const open = typing && window.visualViewport &&
+        window.visualViewport.height < window.innerHeight - 140;
+      document.body.classList.toggle('keyboard-open', open);
     }
-    // When a list field gains focus, center it once the keyboard has settled.
+
     document.addEventListener('focusin', function (e) {
       const el = e.target;
-      if (el && el.closest && el.closest('.list') &&
-          (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+      typing = true;
+      if (removeTimer) { clearTimeout(removeTimer); removeTimer = null; }
+      updateKeyboardOpen();
+      // When a list field gains focus, center it once the keyboard has settled.
+      if (el.closest && el.closest('.list')) {
         setTimeout(function () {
           el.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }, 250);
       }
     });
+
+    document.addEventListener('focusout', function (e) {
+      const el = e.target;
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+      typing = false;
+      if (removeTimer) clearTimeout(removeTimer);
+      removeTimer = setTimeout(function () {
+        document.body.classList.remove('keyboard-open');
+      }, 100);
+    });
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateKeyboardOpen);
+    }
   }
 
   function boot() {
