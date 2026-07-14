@@ -3,7 +3,7 @@
    GitHub Pages project subpath (scope is this file's directory). */
 
 // Bump this string on every deploy to invalidate the old cache.
-const CACHE = 'spark-estimator-v4';
+const CACHE = 'spark-estimator-v7';
 
 // Precache the entire app shell + vendored libraries + icons + brand assets.
 // NOTE: the vendor-ocr/ files (~30MB) are intentionally NOT precached — they are

@@ -715,6 +715,12 @@
     .dg-bar--empty { justify-content: space-between; }
     .dg-bar__title { font-size: var(--fs-14); font-weight: 800; }
     .dg-bar__hint { font-size: var(--fs-12); color: rgba(255,255,255,0.6); }
+    .dg-bar__k-long { display: none; }
+    .dg-bar__k-short { display: inline; }
+    @media (min-width: 400px) {
+      .dg-bar__k-long { display: inline; }
+      .dg-bar__k-short { display: none; }
+    }
 
     .dg-grid { display: flex; flex-direction: column; gap: var(--sp-2); margin: var(--sp-2) 0 var(--sp-4); }
     .dg-stat {
@@ -1328,11 +1334,18 @@
 
   /* Quantity pre-fill — suggested starting qty from project square footage.
      Suggestions are hints only: shown badged, fully editable, never auto-checked. */
-  function suggestedQty(project, itemId) {
+  function suggestedQty(project, room, itemId) {
     const sqft = Number(project.meta.sqft) || 0;
     if (!sqft) return null;
-    if (FLOORING_IDS.indexOf(itemId) >= 0) return Math.round(sqft);           // flooring ≈ sqft
-    if (itemId === 'ig-07') return Math.round(2.75 * sqft);                    // interior paint ≈ 2.75 × sqft
+    const wholeHouse = room.type === 'interior';
+    if (FLOORING_IDS.indexOf(itemId) >= 0) {
+      if (!wholeHouse) return null;
+      return Math.round(sqft);                                                 // flooring ≈ sqft
+    }
+    if (itemId === 'ig-07') {
+      if (!wholeHouse) return null;
+      return Math.round(2.75 * sqft);                                            // interior paint ≈ 2.75 × sqft
+    }
     if (itemId === 'ig-19') return Math.round(1.5 * 4 * Math.sqrt(sqft));      // trim LF ≈ 1.5 × perimeter of square footprint
     if (itemId === 'as-16') return Math.max(1, Math.round(sqft / 225));        // roof (unit is per 225 sqft)
     if (itemId === 'as-22') return Math.max(1, Math.round(sqft / 1600));       // attic insulation (per ~1,600 sqft)
@@ -1394,7 +1407,11 @@
     const arv = Number(project.meta.arv) || 0;
     const repairs = projectTotal(project);
     const maxOffer = arv ? (arv * 0.70 - repairs) : 0;
-    const margin = arv ? (arv - maxOffer - repairs) : 0; // == 0.30 × ARV by the 70% rule
+    // Under the 70% rule, margin = 0.30 × ARV by construction — repairs move the max
+    // offer, not the margin. Labels must say the margin is conditional on offering AT
+    // the max offer, so a tester who adds repairs and sees margin unchanged doesn't
+    // read it as a bug.
+    const margin = arv ? (arv - maxOffer - repairs) : 0;
     const prog = progress(project);
     const unrevFrac = prog.total ? (prog.total - prog.reviewed) / prog.total : 0;
     const rangePct = 0.05 + 0.15 * unrevFrac; // ±5% baseline, widening with unreviewed groups
@@ -1581,7 +1598,7 @@
     }
     // Check an item using its sqft suggestion (keeps the "suggested" badge).
     function checkSuggested(room, itemId) {
-      const q = suggestedQty(p, itemId);
+      const q = suggestedQty(p, room, itemId);
       set(room, itemId, { checked: true, qty: q != null ? q : 1, qtySuggested: q != null });
     }
 
@@ -1792,7 +1809,7 @@
     const overridden = !!(sel && sel.unitCostOverride != null);
     const key = selKey(room.id, itemId);
     const qtyVal = sel && sel.qty != null ? sel.qty : '';
-    const sug = suggestedQty(project, itemId);
+    const sug = suggestedQty(project, room, itemId);
     const showSuggestedBadge = checked && sel && sel.qtySuggested && sug != null;
 
     const rightHtml = checked
@@ -2239,12 +2256,13 @@
       }
       case 'toggle-item': {
         const roomId = target.dataset.room, itemId = target.dataset.item, groupId = target.dataset.group;
+        const room = p.rooms.find(function (r) { return r.id === roomId; });
         const sel = ensureSel(p, roomId, itemId);
         sel.checked = !sel.checked;
         if (sel.checked) {
           if (sel.qty == null) {
             // Pre-fill from the sqft suggestion when available; else default 1.
-            const sug = suggestedQty(p, itemId);
+            const sug = suggestedQty(p, room, itemId);
             sel.qty = sug != null ? sug : 1;
             sel.qtySuggested = sug != null;
           }
@@ -2895,7 +2913,7 @@
           '<span class="dg-bar__v tnum">', money(dg.maxOffer), '</span>',
         '</span>',
         '<span class="dg-bar__col">',
-          '<span class="dg-bar__k">Margin</span>',
+          '<span class="dg-bar__k"><span class="dg-bar__k-long">Margin @ max offer</span><span class="dg-bar__k-short">Margin*</span></span>',
           '<span class="dg-bar__v tnum ', (marginNeg ? 'dg-neg' : ''), '">', money(dg.margin), '</span>',
         '</span>',
         '<span class="dg-bar__more">Deal Guard &rsaquo;</span>',
@@ -2929,13 +2947,13 @@
       '<div class="dg-grid">',
         '<div class="dg-stat"><span class="dg-stat__k">Repair estimate</span><span class="dg-stat__v tnum" id="dg-repairs">', money(dg.repairs), '</span></div>',
         '<div class="dg-stat dg-stat--hero"><span class="dg-stat__k">Max offer (70% rule)</span><span class="dg-stat__v tnum" id="dg-maxoffer">', money(dg.maxOffer), '</span></div>',
-        '<div class="dg-stat"><span class="dg-stat__k">Projected margin</span><span class="dg-stat__v tnum ', (dg.margin < 0 ? 'dg-neg' : ''), '" id="dg-margin">', money(dg.margin), '</span></div>',
+        '<div class="dg-stat"><span class="dg-stat__k">Margin at max offer</span><span class="dg-stat__v tnum ', (dg.margin < 0 ? 'dg-neg' : ''), '" id="dg-margin">', money(dg.margin), '</span></div>',
       '</div>',
-      '<div class="dg-range">Estimate range <span class="tnum" id="dg-range">', money(dg.low), ' – ', money(dg.high), '</span> <span class="hint">— tightens as you review more groups</span></div>',
+      '<div class="dg-range">Estimate range <span class="tnum" id="dg-range">', money(dg.low), ' – ', money(dg.high), '</span> <span class="hint">— simple heuristic: widens while groups are unreviewed</span></div>',
       (unrev.length
         ? '<div class="dg-warn">Not yet reviewed: <b>' + esc(unrev.join(', ')) + '</b>. These usually drive the biggest costs.</div>'
         : '<div class="dg-ok">All big-ticket systems reviewed.</div>'),
-      '<p class="hint" style="margin-top:12px">Max offer = ARV × 70% − repairs. Margin = ARV − offer − repairs.</p>',
+      '<p class="hint" style="margin-top:12px">Max offer = ARV × 70% − repairs (standard flipper heuristic; excludes holding and closing costs). Margin shown assumes you offer at the max.</p>',
       '<button class="btn btn--primary tap" data-action="sheet-close" style="width:100%;margin-top:8px">Done</button>',
     ].join(''));
   }
@@ -3194,20 +3212,15 @@
     }).then(function (w) { ocrWorker = w; return w; });
   }
 
-  // Accuracy gate: from recognized words, keep serial-shaped tokens with
-  // confidence >= 60, preferring ones mixing letters AND digits.
-  function pickSerialToken(words) {
-    const re = /^[A-Z0-9][A-Z0-9\-\/]{5,19}$/i;
-    let best = null;
-    (words || []).forEach(function (w) {
-      const text = (w.text || '').trim();
-      const conf = typeof w.confidence === 'number' ? w.confidence : 0;
-      if (conf < 60 || !re.test(text)) return;
-      const mixed = /[A-Za-z]/.test(text) && /[0-9]/.test(text);
-      const score = conf + (mixed ? 1000 : 0);
-      if (!best || score > best.score) best = { text: text, score: score };
-    });
-    return best;
+  // Parse serial-shaped tokens from full OCR text (v7 LSTM has no data.words by default).
+  function pickSerialFromText(text) {
+    const tokens = (text || '').toUpperCase().split(/[^A-Z0-9\-\/]+/)
+      .filter(function (t) { return /^[A-Z0-9][A-Z0-9\-\/]{4,19}$/.test(t); });
+    const mixed = tokens.filter(function (t) { return /[A-Z]/.test(t) && /[0-9]/.test(t); });
+    if (mixed.length) return mixed.reduce(function (a, b) { return a.length >= b.length ? a : b; });
+    const digits = tokens.filter(function (t) { return /^[0-9]+$/.test(t) && t.length >= 6; });
+    if (digits.length) return digits.reduce(function (a, b) { return a.length >= b.length ? a : b; });
+    return null;
   }
 
   function focusSerialField(roomId, itemId) {
@@ -3239,32 +3252,31 @@
       setTimeout(function () { reject(new Error('timeout')); }, 25000);
     });
     const run = getOcrWorker().then(function (worker) {
-      return worker.setParameters({
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/. ',
-      }).then(function () { return worker.recognize(ph.dataUrl); });
+      return worker.recognize(ph.dataUrl);
     });
 
     Promise.race([run, timeout]).then(function (result) {
-      const words = result && result.data ? result.data.words : null;
-      const best = pickSerialToken(words);
+      const data = result && result.data ? result.data : {};
+      console.log('[OCR]', data.confidence, data.text);
+      const candidate = pickSerialFromText(data.text);
+      const conf = typeof data.confidence === 'number' ? data.confidence : 0;
       restore();
-      if (!best) {
-        toast("Couldn't read a serial — enter it manually", 'error');
+      if (conf < 40 || !candidate) {
+        toast("Couldn't read a serial — enter it manually.", 'error');
         focusSerialField(roomId, itemId);
         return;
       }
-      const token = best.text.toUpperCase();
       const sel = ensureSel(p, roomId, itemId);
-      sel.serial = token;
+      sel.serial = candidate;
       touch(p); saveNow();
       // Reflect on the row (it renders behind the open photos sheet).
       render({ preserveScroll: true });
       const field = document.querySelector('.serial-input[data-room="' + roomId + '"][data-item="' + itemId + '"]');
-      if (field) field.value = token;
+      if (field) field.value = candidate;
       toast('Serial detected — please verify');
     }).catch(function () {
       restore();
-      toast("Couldn't read a serial — enter it manually", 'error');
+      toast('Scanner failed to load — check connection and retry.', 'error');
       focusSerialField(roomId, itemId);
     });
   }
